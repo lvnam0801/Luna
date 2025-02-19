@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warehouse Management System</title>
+    <style>
+        /* Basic Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Main Layout */
+        .container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+        }
+
+        .nav-item {
+            padding: 10px;
+            margin: 5px 0;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .nav-item:hover {
+            background: #34495e;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            padding: 20px;
+            background: #f5f6fa;
+        }
+
+        /* Inventory List */
+        .inventory-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .inventory-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .low-stock {
+            border-left: 4px solid #e74c3c;
+        }
+
+        /* Warehouse Layout Visualization */
+        .warehouse-layout {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .rack {
+            background: #3498db;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* Order Management */
+        .order-list {
+            margin-top: 20px;
+        }
+
+        .order-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .status-pending { background: #f1c40f; }
+        .status-processing { background: #3498db; }
+        .status-shipped { background: #2ecc71; }
+
+        /* Action Buttons */
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <h2>WMS Dashboard</h2>
+            <div class="nav-item">📦 Inventory Management</div>
+            <div class="nav-item">📋 Order Management</div>
+            <div class="nav-item">🗺️ Warehouse Layout</div>
+            <div class="nav-item">📊 Reports</div>
+            <div class="nav-item">⚙️ Settings</div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Inventory Section -->
+            <h3>Inventory Management</h3>
+            <div class="inventory-list">
+                <div class="inventory-item">
+                    <h4>SKU-1234 - Wireless Mouse</h4>
+                    <p>Location: A-12-B</p>
+                    <p>Quantity: 45 <span class="status-indicator"></span></p>
+                    <button class="btn btn-primary">Adjust Stock</button>
+                </div>
+
+                <div class="inventory-item low-stock">
+                    <h4>SKU-5678 - Keyboard</h4>
+                    <p>Location: B-05-C</p>
+                    <p>Quantity: 8 <span class="status-indicator"></span></p>
+                    <button class="btn btn-primary">Reorder</button>
+                </div>
+            </div>
+
+            <!-- Warehouse Layout -->
+            <h3 style="margin-top: 30px;">Warehouse Layout</h3>
+            <div class="warehouse-layout">
+                <div class="rack">A-01</div>
+                <div class="rack">A-02</div>
+                <div class="rack">A-03</div>
+                <div class="rack">A-04</div>
+                <div class="rack">A-05</div>
+            </div>
+
+            <!-- Order Management -->
+            <h3 style="margin-top: 30px;">Active Orders</h3>
+            <div class="order-list">
+                <div class="order-item">
+                    <div>
+                        <h4>Order #1001</h4>
+                        <p>Items: 3 | Priority: High</p>
+                    </div>
+                    <div>
+                        <span class="status-indicator status-processing"></span>
+                        <button class="btn btn-primary">Process</button>
+                    </div>
+                </div>
+
+                <div class="order-item">
+                    <div>
+                        <h4>Order #1002</h4>
+                        <p>Items: 5 | Priority: Medium</p>
+                    </div>
+                    <div>
+                        <span class="status-indicator status-pending"></span>
+                        <button class="btn btn-primary">Process</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
