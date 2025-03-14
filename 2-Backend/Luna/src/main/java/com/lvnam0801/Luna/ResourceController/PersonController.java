@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.lvnam0801.Luna.ResourceRepresentation.Person;
 
-
 @RestController
 public class PersonController {
     @Autowired

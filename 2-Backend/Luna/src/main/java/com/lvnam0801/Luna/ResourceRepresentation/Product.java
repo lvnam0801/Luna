@@ -1,0 +1,2 @@
+package com.lvnam0801.Luna.ResourceRepresentation;
+public record Product(Integer id, String name, String sku, String location, String expiryDate, String retailPrice, String wholesalePrice, String status, String category){};
