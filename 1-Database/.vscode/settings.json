@@ -11,7 +11,21 @@
             "driver": "MySQL",
             "name": "LunaDB",
             "group": "Luna",
-            "database": "lunaDB",
+            "database": "LunaDB",
+            "username": "root"
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 1201,
+            "driver": "MySQL",
+            "name": "LunaWMS",
+            "group": "Luna",
+            "database": "LunaWMS",
             "username": "root"
         }
     ]

@@ -1,2 +1,15 @@
 package com.lvnam0801.Luna.ResourceRepresentation;
-public record Product(Integer id, String name, String sku, String location, String expiryDate, String retailPrice, String wholesalePrice, String status, String category){};
+import java.util.List;
+
+public record Product(
+    Integer productID,
+    String name,
+    String photoURL,
+    String origin,
+    Long wholesalePrice,
+    Long retailPrice,
+    String status,  // ENUM: 'Active', 'Inactive'
+    String manufacturer,  // Manufacturer Name instead of ID
+    String category,  // Category Name instead of ID
+    List<ProductDimension> dimensions  // List of dimensions for the product
+) {}
