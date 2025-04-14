@@ -1,13 +1,15 @@
-package com.lvnam0801.Luna.ResourceRepresentation;
+package com.lvnam0801.Luna.Resource.Core.SKUItem.Representation;
 
 import java.time.LocalTime;
 import java.util.List;
 
-public record ProductInstance(
+import com.lvnam0801.Luna.Resource.Core.ProductDimension.Representation.ProductDimension;
+
+public record SKUItem(
     Integer instanceID, 
     String SKU, 
     Integer quantity, 
-    LocalTime expiredDate, 
+    LocalTime expiredDate,
     String name, 
     String photoURL, 
     String origin, 

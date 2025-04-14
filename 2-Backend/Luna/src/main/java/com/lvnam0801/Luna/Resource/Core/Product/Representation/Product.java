@@ -1,5 +1,7 @@
-package com.lvnam0801.Luna.ResourceRepresentation;
+package com.lvnam0801.Luna.Resource.Core.Product.Representation;
 import java.util.List;
+
+import com.lvnam0801.Luna.Resource.Core.ProductDimension.Representation.ProductDimension;
 
 public record Product(
     Integer productID,
@@ -8,7 +10,7 @@ public record Product(
     String origin,
     Long wholesalePrice,
     Long retailPrice,
-    String status,  // ENUM: 'Active', 'Inactive'
+    String status,  // ENUM: 'active', 'inactive'
     String manufacturer,  // Manufacturer Name instead of ID
     String category,  // Category Name instead of ID
     List<ProductDimension> dimensions  // List of dimensions for the product

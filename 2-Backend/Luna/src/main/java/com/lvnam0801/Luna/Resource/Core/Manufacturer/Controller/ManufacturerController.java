@@ -1,4 +1,4 @@
-package com.lvnam0801.Luna.ResourceController;
+package com.lvnam0801.Luna.Resource.Core.Manufacturer.Controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.lvnam0801.Luna.ResourceRepresentation.Manufacturer;
-import com.lvnam0801.Luna.ResourceRepresentation.ManufacturerRequest;
+import com.lvnam0801.Luna.Resource.Core.Manufacturer.Representation.Manufacturer;
+import com.lvnam0801.Luna.Resource.Core.Manufacturer.Representation.ManufacturerRequest;
 
 @RestController
 @RequestMapping("/api/manufacturer")

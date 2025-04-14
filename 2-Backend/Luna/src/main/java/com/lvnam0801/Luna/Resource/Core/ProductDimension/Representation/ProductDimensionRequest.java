@@ -1,4 +1,4 @@
-package com.lvnam0801.Luna.ResourceRepresentation;
+package com.lvnam0801.Luna.Resource.Core.ProductDimension.Representation;
 import lombok.Getter;
 import lombok.Setter;
 

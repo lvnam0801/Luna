@@ -1,4 +1,4 @@
-package com.lvnam0801.Luna.ResourceController;
+package com.lvnam0801.Luna.Resource.Core.ProductCategory.Controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import com.lvnam0801.Luna.ResourceRepresentation.ProductCategory;
-import com.lvnam0801.Luna.ResourceRepresentation.ProductCategoryRequest;
+import com.lvnam0801.Luna.Resource.Core.ProductCategory.Representation.ProductCategory;
+import com.lvnam0801.Luna.Resource.Core.ProductCategory.Representation.ProductCategoryRequest;
 
 
 

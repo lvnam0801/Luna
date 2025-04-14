@@ -1,10 +1,12 @@
-package com.lvnam0801.Luna.ResourceController;
+package com.lvnam0801.Luna.Resource.Common.Dashboard.Controller;
 
 import org.springframework.web.bind.annotation.RestController;
+
+import com.lvnam0801.Luna.Resource.Common.Dashboard.Representation.StockLevel;
+
 import java.util.ArrayList;
 
 import org.springframework.web.bind.annotation.GetMapping;
-import com.lvnam0801.Luna.ResourceRepresentation.StockLevel;
 
 
 @RestController

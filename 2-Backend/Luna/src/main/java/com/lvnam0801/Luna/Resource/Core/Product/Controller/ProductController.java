@@ -1,4 +1,4 @@
-package com.lvnam0801.Luna.ResourceController;
+package com.lvnam0801.Luna.Resource.Core.Product.Controller;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,10 +12,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.lvnam0801.Luna.ResourceRepresentation.Product;
-import com.lvnam0801.Luna.ResourceRepresentation.ProductCreateRequest;
-import com.lvnam0801.Luna.ResourceRepresentation.ProductDimension;
-import com.lvnam0801.Luna.ResourceRepresentation.ProductDimensionRequest;
+import com.lvnam0801.Luna.Resource.Core.Product.Representation.Product;
+import com.lvnam0801.Luna.Resource.Core.Product.Representation.ProductCreateRequest;
+import com.lvnam0801.Luna.Resource.Core.ProductDimension.Representation.ProductDimension;
+import com.lvnam0801.Luna.Resource.Core.ProductDimension.Representation.ProductDimensionRequest;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;

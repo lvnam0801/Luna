@@ -1,7 +1,9 @@
-package com.lvnam0801.Luna.ResourceRepresentation;
+package com.lvnam0801.Luna.Resource.Core.Product.Representation;
 import lombok.Getter;
 import lombok.Setter;
 import java.util.List;
+
+import com.lvnam0801.Luna.Resource.Core.ProductDimension.Representation.ProductDimensionRequest;
 
 @Getter
 @Setter
