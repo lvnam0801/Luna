@@ -1,8 +1,0 @@
-package com.lvnam0801.Luna.Resource.Import.ImportProduct.Representation;
-
-public record ImportProduct(
-    Integer importProductID,
-    Integer receiptID,
-    Integer productID,
-    Integer amount
-) {}
