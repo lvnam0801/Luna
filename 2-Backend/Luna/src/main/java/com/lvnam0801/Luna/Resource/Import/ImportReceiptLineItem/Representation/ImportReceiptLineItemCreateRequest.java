@@ -1,0 +1,19 @@
+package com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Representation;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+
+public record ImportReceiptLineItemCreateRequest(
+    Integer receiptID,
+    Integer productID,
+    Integer lineItemNumber,
+    Integer expectedQuantity,
+    Integer receivedQuantity,
+    String discrepancyReasonCode,
+    String lotNumber,
+    String serialNumber,
+    Date expirationDate,
+    BigDecimal unitCost,
+    String status,
+    Integer createdBy
+) {}
