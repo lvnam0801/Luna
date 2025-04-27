@@ -2,6 +2,7 @@ package com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Service;
 
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -12,25 +13,34 @@ import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Representation.Impor
 import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Service.ImportActivityLogService;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Representation.ImportReceiptLineItem;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Representation.ImportReceiptLineItemCreateRequest;
-import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Representation.ImportReceiptLineItemResponse;
+import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Representation.ImportReceiptLineItemCreateResponse;
 
 @Service
 public class ImportReceiptLineItemServiceImpl implements ImportReceiptLineItemService{
     private final JdbcTemplate jdbcTemplate;
-    private final UserService userService;
     private final ImportActivityLogService importActivityLogService;
 
     public ImportReceiptLineItemServiceImpl(JdbcTemplate jdbcTemplate, UserService userService, ImportActivityLogService importActivityLogService)
     {
         this.jdbcTemplate = jdbcTemplate;
         this.importActivityLogService = importActivityLogService;
-        this.userService = userService;
     }
 
     @Override
-    public ImportReceiptLineItemResponse[] getByReceipt(Integer receiptID)
-    {
-        String sql = "SELECT * FROM ImportReceiptLineItem WHERE ReceiptID = ?";
+    public ImportReceiptLineItem[] getByReceipt(Integer receiptID) {
+        String sql = """
+            SELECT
+                li.*,
+                p.Name AS ProductName,
+                cu.Name AS CreatedByName,
+                uu.Name AS UpdatedByName
+            FROM ImportReceiptLineItem li
+            LEFT JOIN Product p ON li.ProductID = p.ProductID
+            LEFT JOIN User cu ON li.CreatedBy = cu.UserID
+            LEFT JOIN User uu ON li.UpdatedBy = uu.UserID
+            WHERE li.ReceiptID = ?
+        """;
+    
         List<ImportReceiptLineItem> items = jdbcTemplate.query(
             sql,
             new Object[]{receiptID},
@@ -38,7 +48,8 @@ public class ImportReceiptLineItemServiceImpl implements ImportReceiptLineItemSe
                 rs.getInt("ReceiptLineItemID"),
                 rs.getInt("ReceiptID"),
                 rs.getInt("ProductID"),
-                rs.getInt("LineItemNumber"),
+                rs.getString("ProductName"),
+                rs.getString("LineItemNumber"),
                 rs.getInt("ExpectedQuantity"),
                 rs.getInt("ReceivedQuantity"),
                 rs.getInt("QuantityDiscrepancy"),
@@ -49,56 +60,87 @@ public class ImportReceiptLineItemServiceImpl implements ImportReceiptLineItemSe
                 rs.getBigDecimal("UnitCost"),
                 rs.getString("Status"),
                 rs.getInt("CreatedBy"),
+                rs.getString("CreatedByName"),
                 rs.getTimestamp("CreatedDate"),
                 rs.getInt("UpdatedBy"),
+                rs.getString("UpdatedByName"),
                 rs.getTimestamp("UpdatedDate")
             )
         );
-
-        // Map to response objects with names
-        List<ImportReceiptLineItemResponse> responseList = items.stream()
-            .map(item -> new ImportReceiptLineItemResponse(
-                item.receiptLineItemID(),
-                item.receiptID(),
-                item.productID(),
-                item.lineItemNumber(),
-                item.expectedQuantity(),
-                item.receivedQuantity(),
-                item.quantityDiscrepancy(),
-                item.discrepancyReasonCode(),
-                item.lotNumber(),
-                item.serialNumber(),
-                item.expirationDate(),
-                item.unitCost(),
-                item.status(),
-                item.createdBy(),
-                userService.getFullName(item.createdBy()),
-                item.createdDate(),
-                item.updatedBy(),
-                userService.getFullName(item.updatedBy()),
-                item.updatedDate()
-            ))
-            .toList();
-
-        return responseList.toArray(ImportReceiptLineItemResponse[]::new);
+    
+        return items.toArray(ImportReceiptLineItem[]::new);
     }
 
-    @Override 
-    public ImportReceiptLineItem createLine(ImportReceiptLineItemCreateRequest request)
+    @Override
+    public ImportReceiptLineItem getById(Integer receiptLineItemID) {
+        String sql = """
+            SELECT
+                li.*,
+                p.Name AS ProductName,
+                cu.Name AS CreatedByName,
+                uu.Name AS UpdatedByName
+            FROM ImportReceiptLineItem li
+            LEFT JOIN Product p ON li.ProductID = p.ProductID
+            LEFT JOIN User cu ON li.CreatedBy = cu.UserID
+            LEFT JOIN User uu ON li.UpdatedBy = uu.UserID
+            WHERE li.ReceiptLineItemID = ?
+        """;
+
+        return jdbcTemplate.queryForObject(
+            sql,
+            new Object[]{receiptLineItemID},
+            (rs, rowNum) -> new ImportReceiptLineItem(
+                rs.getInt("ReceiptLineItemID"),
+                rs.getInt("ReceiptID"),
+                rs.getInt("ProductID"),
+                rs.getString("ProductName"),
+                rs.getString("LineItemNumber"),
+                rs.getInt("ExpectedQuantity"),
+                rs.getInt("ReceivedQuantity"),
+                rs.getInt("QuantityDiscrepancy"),
+                rs.getString("DiscrepancyReasonCode"),
+                rs.getString("LotNumber"),
+                rs.getString("SerialNumber"),
+                rs.getDate("ExpirationDate"),
+                rs.getBigDecimal("UnitCost"),
+                rs.getString("Status"),
+                rs.getInt("CreatedBy"),
+                rs.getString("CreatedByName"),
+                rs.getTimestamp("CreatedDate"),
+                rs.getInt("UpdatedBy"),
+                rs.getString("UpdatedByName"),
+                rs.getTimestamp("UpdatedDate")
+            )
+        );
+    }
+
+    @Override
+    public Integer getReceiptIDByLineItemID(int lineItemID)
     {
-        
+        String sql = "SELECT ReceiptID FROM ImportReceiptLineItem WHERE ReceiptLineItemID = ?";
+        return jdbcTemplate.queryForObject(sql, new Object[]{lineItemID}, Integer.class);
+    }
+
+    @Override
+    public ImportReceiptLineItemCreateResponse createLine(ImportReceiptLineItemCreateRequest request) {
+        // Generate LineItemNumber
+        String lineItemNumber = "RLI-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
         String sql = """
             INSERT INTO ImportReceiptLineItem (
-                ReceiptID, ProductID, LineItemNumber, ExpectedQuantity, ReceivedQuantity,
+                ReceiptID, ProductID, LineItemNumber,
+                ExpectedQuantity, ReceivedQuantity,
                 DiscrepancyReasonCode, LotNumber, SerialNumber, ExpirationDate,
-                UnitCost, Status, CreatedBy, UpdatedBy
+                UnitCost, Status,
+                CreatedBy, UpdatedBy
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
-        jdbcTemplate.update(sql,
+        jdbcTemplate.update(
+            sql,
             request.receiptID(),
             request.productID(),
-            request.lineItemNumber(),
+            lineItemNumber,
             request.expectedQuantity(),
             request.receivedQuantity(),
             request.discrepancyReasonCode(),
@@ -108,39 +150,24 @@ public class ImportReceiptLineItemServiceImpl implements ImportReceiptLineItemSe
             request.unitCost(),
             request.status(),
             request.createdBy(),
-            request.createdBy()
+            request.createdBy() // For now createdBy = updatedBy at creation
         );
 
         Integer id = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Integer.class);
-        Timestamp now = new Timestamp(System.currentTimeMillis());
-        ImportReceiptLineItem lineItem = new ImportReceiptLineItem(
-            id,
-            request.receiptID(),
-            request.productID(),
-            request.lineItemNumber(),
-            request.expectedQuantity(),
-            request.receivedQuantity(),
-            request.receivedQuantity() - request.expectedQuantity(),
-            request.discrepancyReasonCode(),
-            request.lotNumber(),
-            request.serialNumber(),
-            request.expirationDate(),
-            request.unitCost(),
-            request.status(),
-            request.createdBy(),
-            now,
-            request.createdBy(),
-            now
-        );
 
+        // Log creation activity
         importActivityLogService.log(
             request.receiptID(),
             request.createdBy(),
             ImportActivityTargetType.LINE_ITEM.value(),
             ImportActivityActionType.CREATE.value(),
             id,
-            "Tạo dòng sản phẩm: " + request.lineItemNumber()
+            "Tạo dòng sản phẩm: " + lineItemNumber
         );
-        return lineItem;
+
+        return new ImportReceiptLineItemCreateResponse(
+            id,
+            "Import Receipt Line Item created successfully."
+        );
     }
 }

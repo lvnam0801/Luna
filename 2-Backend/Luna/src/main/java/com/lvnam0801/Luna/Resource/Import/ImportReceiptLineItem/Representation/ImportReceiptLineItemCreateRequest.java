@@ -6,7 +6,6 @@ import java.sql.Date;
 public record ImportReceiptLineItemCreateRequest(
     Integer receiptID,
     Integer productID,
-    Integer lineItemNumber,
     Integer expectedQuantity,
     Integer receivedQuantity,
     String discrepancyReasonCode,

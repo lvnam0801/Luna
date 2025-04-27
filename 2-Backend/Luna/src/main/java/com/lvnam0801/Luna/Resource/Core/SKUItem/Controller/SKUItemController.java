@@ -1,10 +1,8 @@
 package com.lvnam0801.Luna.Resource.Core.SKUItem.Controller;
 
 import com.lvnam0801.Luna.Resource.Core.SKUItem.Representation.SKUItem;
-import com.lvnam0801.Luna.Resource.Core.SKUItem.Representation.SKUItemRequest;
 import com.lvnam0801.Luna.Resource.Core.SKUItem.Service.SKUItemService;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,10 +23,10 @@ public class SKUItemController {
         return ResponseEntity.ok(items);
     }
 
-    @PostMapping("/create")
-    public ResponseEntity<Integer> createSKUItem(@RequestBody SKUItemRequest request) 
-    {
-        Integer itemID = skuItemService.createSKUItem(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(itemID);
-    }
+    // @PostMapping("/create")
+    // public ResponseEntity<Integer> createSKUItem(@RequestBody SKUItemRequest request) 
+    // {
+    //     Integer itemID = skuItemService.createSKUItem(request);
+    //     return ResponseEntity.status(HttpStatus.CREATED).body(itemID);
+    // }
 }

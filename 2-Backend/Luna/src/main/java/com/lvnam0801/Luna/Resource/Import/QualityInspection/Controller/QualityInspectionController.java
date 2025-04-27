@@ -2,7 +2,9 @@ package com.lvnam0801.Luna.Resource.Import.QualityInspection.Controller;
 
 import com.lvnam0801.Luna.Resource.Import.QualityInspection.Representation.QualityInspection;
 import com.lvnam0801.Luna.Resource.Import.QualityInspection.Representation.QualityInspectionCreateRequest;
+import com.lvnam0801.Luna.Resource.Import.QualityInspection.Representation.QualityInspectionCreateResponse;
 import com.lvnam0801.Luna.Resource.Import.QualityInspection.Representation.QualityInspectionUpdateRequest;
+import com.lvnam0801.Luna.Resource.Import.QualityInspection.Representation.QualityInspectionUpdateResponse;
 import com.lvnam0801.Luna.Resource.Import.QualityInspection.Service.QualityInspectionService;
 
 import org.springframework.dao.DataAccessException;
@@ -34,6 +36,25 @@ public class QualityInspectionController {
         }
     }
 
+    @GetMapping("/get-by-id/{inspectionID}")
+    public ResponseEntity<?> getInspectionById(@PathVariable Integer inspectionID) {
+        try {
+            if (inspectionID == null) {
+                return ResponseEntity.badRequest().body("Missing required field: inspectionID");
+            }
+
+            QualityInspection inspection = qualityInspectionService.getById(inspectionID);
+            return ResponseEntity.ok(inspection);
+
+        } catch (DataAccessException dae) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Database error while retrieving inspection: " + dae.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Unexpected error occurred while retrieving inspection: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/create")
     public ResponseEntity<?> createInspection(
         @RequestBody QualityInspectionCreateRequest request
@@ -50,8 +71,8 @@ public class QualityInspectionController {
                     .body("The total inspected quantity would exceed the received quantity of the line item.");
             }
     
-            QualityInspection qualityInspection = qualityInspectionService.createInspection(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(qualityInspection);
+            QualityInspectionCreateResponse response = qualityInspectionService.createInspection(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
     
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity
@@ -89,8 +110,8 @@ public class QualityInspectionController {
                     .body("The total inspected quantity would exceed the received quantity of the line item.");
             }
 
-            QualityInspection updated = qualityInspectionService.updateInspectionPartially(id, request);
-            return ResponseEntity.ok(updated);
+            QualityInspectionUpdateResponse response = qualityInspectionService.updateInspectionPartially(id, request);
+            return ResponseEntity.ok(response);
 
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity

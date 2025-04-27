@@ -8,7 +8,8 @@ public record ImportReceiptLineItem(
     Integer receiptLineItemID,
     Integer receiptID,
     Integer productID,
-    Integer lineItemNumber,
+    String productName,
+    String lineItemNumber,
     Integer expectedQuantity,
     Integer receivedQuantity,
     Integer quantityDiscrepancy,
@@ -19,7 +20,9 @@ public record ImportReceiptLineItem(
     BigDecimal unitCost,
     String status,
     Integer createdBy,
+    String createdByName,
     Timestamp createdDate,
     Integer updatedBy,
+    String updatedByName,
     Timestamp updatedDate
 ) {}

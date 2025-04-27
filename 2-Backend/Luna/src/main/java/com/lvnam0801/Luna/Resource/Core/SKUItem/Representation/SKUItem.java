@@ -1,18 +1,35 @@
 package com.lvnam0801.Luna.Resource.Core.SKUItem.Representation;
 
-import java.time.LocalTime;
+import java.sql.Date;
 
 public record SKUItem(
+    // SKIItem table
     Integer itemID, 
     String SKU, 
     Integer quantity, 
-    LocalTime expiredDate,
+    String status,
+    
+    // Product table
     String name, 
     String photoURL, 
     String origin, 
     Long wholesalePrice, 
     Long retailPrice,
-    String manufacturerName,
+    
+    // Category table get from product
+    Integer categoryID,
     String categoryName,
-    String status
+    
+    // Manufacturer table get from product
+    Integer manufacturerID,
+    String manufacturerName,
+    
+    // Location: from putaway, refer to Warehouse table and Location table (one putaway has one SKUItem)
+    Integer warehouseID,
+    String warehouseName,
+    Integer locationID,
+    String locationName,
+    
+    // From Import Receipt Line Item table get from Putaway
+    Date expirationDate
 ) {}

@@ -2,6 +2,7 @@ package com.lvnam0801.Luna.Resource.Import.Putaway.Controller;
 
 import com.lvnam0801.Luna.Resource.Import.Putaway.Representation.Putaway;
 import com.lvnam0801.Luna.Resource.Import.Putaway.Representation.PutawayCreateRequest;
+import com.lvnam0801.Luna.Resource.Import.Putaway.Representation.PutawayCreateResponse;
 import com.lvnam0801.Luna.Resource.Import.Putaway.Service.PutawayService;
 
 import org.springframework.dao.DataAccessException;
@@ -20,8 +21,39 @@ public class PutawayController {
     }
 
     @GetMapping("/get-by-receipt-line/{receiptLineItemID}")
-    public Putaway[] getByReceiptLine(@PathVariable Integer receiptLineItemID) {
-       return putawayService.getByReceiptLine(receiptLineItemID);
+    public ResponseEntity<?> getByReceiptLine(@PathVariable Integer receiptLineItemID) {
+        try {
+            if (receiptLineItemID == null) {
+                return ResponseEntity.badRequest().body("Missing required field: receiptLineItemID");
+            }
+    
+            Putaway[] putaways = putawayService.getByReceiptLine(receiptLineItemID);
+            return ResponseEntity.ok(putaways);
+        } catch (DataAccessException dae) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Database error while retrieving putaways: " + dae.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Unexpected error occurred: " + e.getMessage());
+        }
+    }
+    
+    @GetMapping("/get-by-id/{putawayID}")
+    public ResponseEntity<?> getPutawayById(@PathVariable Integer putawayID) {
+        try {
+            if (putawayID == null) {
+                return ResponseEntity.badRequest().body("Missing required field: putawayID");
+            }
+    
+            Putaway putaway = putawayService.getById(putawayID);
+            return ResponseEntity.ok(putaway);
+        } catch (DataAccessException dae) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Database error while retrieving putaway: " + dae.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Unexpected error occurred: " + e.getMessage());
+        }
     }
 
     @PostMapping("/create")
@@ -54,8 +86,8 @@ public class PutawayController {
             }
 
             // Step 4: Create Putaway
-            Putaway putaway = putawayService.createPutaway(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(putaway);
+            PutawayCreateResponse response = putawayService.createPutaway(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest().body("Validation error: " + e.getMessage());

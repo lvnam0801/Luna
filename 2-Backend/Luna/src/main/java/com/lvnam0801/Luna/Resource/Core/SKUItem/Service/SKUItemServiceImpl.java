@@ -1,6 +1,5 @@
 package com.lvnam0801.Luna.Resource.Core.SKUItem.Service;
 
-import java.sql.Date;
 import java.util.List;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,48 +20,67 @@ public class SKUItemServiceImpl implements SKUItemService {
     }
 
     @Override
-    public SKUItem[] getAllSKUItems()
-    {
+    public SKUItem[] getAllSKUItems() {
         String sql = """
-            SELECT 
+            SELECT
                 s.ItemID,
                 s.SKU,
                 s.Quantity,
-                i.ExpirationDate,
-
+                s.Status,
+    
                 p.Name,
                 p.PhotoURL,
                 p.Origin,
                 p.WholesalePrice,
                 p.RetailPrice,
-
-                m.Name AS ManufacturerName,
+                p.CategoryID,
+                p.ManufacturerID,
+    
                 c.Name AS CategoryName,
-
-                s.Status
+                m.Name AS ManufacturerName,
+    
+                w.WarehouseID,
+                w.Name AS WarehouseName,
+                l.LocationID,
+                l.Value AS LocationName,
+    
+                r.ExpirationDate
+    
             FROM SKUItem s
             JOIN Product p ON s.ProductID = p.ProductID
-            LEFT JOIN Manufacturer m ON p.ManufacturerID = m.ManufacturerID
             LEFT JOIN ProductCategory c ON p.CategoryID = c.CategoryID
-            LEFT JOIN ImportReceiptLineItem i ON i.ItemID = s.ItemID
+            LEFT JOIN Manufacturer m ON p.ManufacturerID = m.ManufacturerID
+            LEFT JOIN Putaway pu ON pu.SKUItemID = s.ItemID
+            LEFT JOIN Location l ON pu.PutawayAtLocation = l.LocationID
+            LEFT JOIN Warehouse w ON l.WarehouseID = w.WarehouseID
+            LEFT JOIN ImportReceiptLineItem r ON pu.ReceiptLineItemID = r.ReceiptLineItemID
         """;
-
+    
         List<SKUItem> items = jdbcTemplate.query(sql, (rs, rowNum) -> new SKUItem(
             rs.getInt("ItemID"),
             rs.getString("SKU"),
             rs.getInt("Quantity"),
-            rs.getObject("ExpirationDate", Date.class) != null 
-                ? rs.getDate("ExpirationDate").toLocalDate().atStartOfDay().toLocalTime() 
-                : null,
+            rs.getString("Status"),
+    
             rs.getString("Name"),
             rs.getString("PhotoURL"),
             rs.getString("Origin"),
             rs.getLong("WholesalePrice"),
             rs.getLong("RetailPrice"),
-            rs.getString("ManufacturerName"),
+    
+            rs.getInt("CategoryID"),
             rs.getString("CategoryName"),
-            rs.getString("Status")
+            rs.getInt("ManufacturerID"),
+            rs.getString("ManufacturerName"),
+    
+            rs.getInt("WarehouseID"),
+            rs.getString("WarehouseName"),
+            rs.getInt("LocationID"),
+            rs.getString("LocationName"),
+    
+            rs.getDate("ExpirationDate")        
         ));
+    
         return items.toArray(SKUItem[]::new);
     }
 

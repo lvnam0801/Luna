@@ -2,7 +2,7 @@ package com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Controller;
 
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Representation.ImportReceiptLineItem;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Representation.ImportReceiptLineItemCreateRequest;
-import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Representation.ImportReceiptLineItemResponse;
+import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Representation.ImportReceiptLineItemCreateResponse;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Service.ImportReceiptLineItemService;
 
 import org.springframework.dao.DataAccessException;
@@ -22,21 +22,39 @@ public class ImportReceiptLineItemController {
         this.importReceiptLineItemService = importReceiptLineItemService;
     }
 
-
     @GetMapping("/get-by-receipt/{receiptID}")
     public ResponseEntity<?> getByReceipt(@PathVariable Integer receiptID) {
         try {
             if(receiptID == null){
                 return ResponseEntity.badRequest().body("Missing required fields: receiptID");
             }
-            ImportReceiptLineItemResponse[] importReceiptLineItemResponses = importReceiptLineItemService.getByReceipt(receiptID);
-            return ResponseEntity.ok(importReceiptLineItemResponses);
+            ImportReceiptLineItem[] importReceiptLineItems = importReceiptLineItemService.getByReceipt(receiptID);
+            return ResponseEntity.ok(importReceiptLineItems);
         } catch (DataAccessException dae) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("Database error while retrieving line items: " + dae.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("Unexpected error occurred while retrieving line items: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/get-by-id/{receiptLineItemID}")
+    public ResponseEntity<?> getReceiptLineItemById(@PathVariable Integer receiptLineItemID) {
+        try {
+            if (receiptLineItemID == null) {
+                return ResponseEntity.badRequest().body("Missing required field: receiptLineItemID");
+            }
+
+            ImportReceiptLineItem item = importReceiptLineItemService.getById(receiptLineItemID);
+            return ResponseEntity.ok(item);
+
+        } catch (DataAccessException dae) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Database error while retrieving line item: " + dae.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Unexpected error occurred while retrieving line item: " + e.getMessage());
         }
     }
     
@@ -46,8 +64,8 @@ public class ImportReceiptLineItemController {
             if (request.receiptID() == null || request.productID() == null || request.createdBy() == null) {
                 return ResponseEntity.badRequest().body("Missing required fields: receiptID, itemID, or createdBy.");
             }
-            ImportReceiptLineItem createdLineItem = importReceiptLineItemService.createLine(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdLineItem);
+            ImportReceiptLineItemCreateResponse response = importReceiptLineItemService.createLine(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
         } catch (DataAccessException dae) {
             return ResponseEntity

@@ -1,42 +1,68 @@
 package com.lvnam0801.Luna.Resource.Import.QualityInspection.Service;
 
-
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
 import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Representation.ImportActivityActionType;
 import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Representation.ImportActivityTargetType;
 import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Service.ImportActivityLogService;
+import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Service.ImportReceiptLineItemService;
 import com.lvnam0801.Luna.Resource.Import.QualityInspection.Representation.QualityInspection;
 import com.lvnam0801.Luna.Resource.Import.QualityInspection.Representation.QualityInspectionCreateRequest;
+import com.lvnam0801.Luna.Resource.Import.QualityInspection.Representation.QualityInspectionCreateResponse;
 import com.lvnam0801.Luna.Resource.Import.QualityInspection.Representation.QualityInspectionUpdateRequest;
+import com.lvnam0801.Luna.Resource.Import.QualityInspection.Representation.QualityInspectionUpdateResponse;
 
 @Service
 public class QualityInspectionServiceImpl implements QualityInspectionService{
     
     private final JdbcTemplate jdbcTemplate;
+    private final ImportReceiptLineItemService importReceiptLineItemService;
     private final ImportActivityLogService  importActivityLogService;
 
-    public QualityInspectionServiceImpl(JdbcTemplate jdbcTemplate, ImportActivityLogService importActivityLogService)
+    public QualityInspectionServiceImpl(JdbcTemplate jdbcTemplate, ImportReceiptLineItemService importReceiptLineItemService, ImportActivityLogService importActivityLogService)
     {
         this.jdbcTemplate = jdbcTemplate;
+        this.importReceiptLineItemService = importReceiptLineItemService;
         this.importActivityLogService = importActivityLogService;
     }
 
     @Override
     public QualityInspection[] getByLineItem(Integer receiptLineItemID) {
         String sql = """
-            SELECT * FROM QualityInspection WHERE ReceiptLineItemID = ?
+            SELECT 
+                i.InspectionID,
+                i.InspectionNumber,
+                i.ReceiptLineItemID,
+                i.InspectedBy,
+                ub.UserName AS InspectedByName,
+                i.InspectionDate,
+                i.InspectedLocationID,
+                l.Value AS InspectedLocationName,
+                i.Quantity,
+                i.InspectionResult,
+                i.Notes,
+                i.Status,
+                i.CreatedBy,
+                uc.UserName AS CreatedByName,
+                i.CreatedAt,
+                i.UpdatedBy,
+                uu.UserName AS UpdatedByName,
+                i.UpdatedAt
+            FROM QualityInspection i
+            LEFT JOIN User ub ON i.InspectedBy = ub.UserID
+            LEFT JOIN Location l ON i.InspectedLocationID = l.LocationID
+            LEFT JOIN User uc ON i.CreatedBy = uc.UserID
+            LEFT JOIN User uu ON i.UpdatedBy = uu.UserID
+            WHERE i.ReceiptLineItemID = ?
         """;
-    
-        return jdbcTemplate.query(
+
+        List<QualityInspection> inspections = jdbcTemplate.query(
             sql,
             new Object[]{receiptLineItemID},
             (rs, rowNum) -> new QualityInspection(
@@ -44,18 +70,63 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
                 rs.getString("InspectionNumber"),
                 rs.getInt("ReceiptLineItemID"),
                 rs.getInt("InspectedBy"),
+                rs.getString("InspectedByName"),
                 rs.getDate("InspectionDate"),
                 rs.getInt("InspectedLocationID"),
+                rs.getString("InspectedLocationName"),
                 rs.getInt("Quantity"),
                 rs.getString("InspectionResult"),
                 rs.getString("Notes"),
                 rs.getString("Status"),
                 rs.getInt("CreatedBy"),
+                rs.getString("CreatedByName"),
                 rs.getTimestamp("CreatedAt"),
                 rs.getInt("UpdatedBy"),
+                rs.getString("UpdatedByName"),
                 rs.getTimestamp("UpdatedAt")
             )
-        ).toArray(QualityInspection[]::new);
+        );
+
+        return inspections.toArray(QualityInspection[]::new);
+    }
+
+    @Override
+    public QualityInspection getById(Integer inspectionID) {
+        String sql = """
+            SELECT 
+                i.*, 
+                cu.Name AS CreatedByName,
+                uu.Name AS UpdatedByName,
+                ins.Name AS InspectedByName,
+                l.Value AS InspectedLocationName
+            FROM QualityInspection i
+            LEFT JOIN User cu ON i.CreatedBy = cu.UserID
+            LEFT JOIN User uu ON i.UpdatedBy = uu.UserID
+            LEFT JOIN User ins ON i.InspectedBy = ins.UserID
+            LEFT JOIN Location l ON i.InspectedLocationID = l.LocationID
+            WHERE i.InspectionID = ?
+        """;
+
+        return jdbcTemplate.queryForObject(sql, new Object[]{inspectionID}, (rs, rowNum) -> new QualityInspection(
+            rs.getInt("InspectionID"),
+            rs.getString("InspectionNumber"),
+            rs.getInt("ReceiptLineItemID"),
+            rs.getInt("InspectedBy"),
+            rs.getString("InspectedByName"),
+            rs.getDate("InspectionDate"),
+            rs.getInt("InspectedLocationID"),
+            rs.getString("InspectedLocationName"),
+            rs.getInt("Quantity"),
+            rs.getString("InspectionResult"),
+            rs.getString("Notes"),
+            rs.getString("Status"),
+            rs.getInt("CreatedBy"),
+            rs.getString("CreatedByName"),
+            rs.getTimestamp("CreatedAt"),
+            rs.getInt("UpdatedBy"),
+            rs.getString("UpdatedByName"),
+            rs.getTimestamp("UpdatedAt")
+        ));
     }
 
     @Override
@@ -83,8 +154,8 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
         }
     }
 
-  @Override
-    public QualityInspection createInspection(QualityInspectionCreateRequest inspectionCreateRequest) {
+    @Override
+    public QualityInspectionCreateResponse createInspection(QualityInspectionCreateRequest inspectionCreateRequest) {
         Integer mockCreatedById = 3;
         Integer mockUpdatedById = 3;
 
@@ -94,21 +165,16 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
         // Step 2: Insert into database
         String sql = """
             INSERT INTO QualityInspection (
-                InspectionNumber,
-                ReceiptLineItemID,
-                InspectedBy,
-                InspectionDate,
-                InspectedLocationID,
-                Quantity,
-                InspectionResult,
-                Notes,
-                Status,
-                CreatedBy,
-                UpdatedBy
+                InspectionNumber, ReceiptLineItemID,
+                InspectedBy, InspectionDate,
+                InspectedLocationID, Quantity,
+                InspectionResult, Notes,
+                Status, CreatedBy, UpdatedBy
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
-        jdbcTemplate.update(sql,
+        jdbcTemplate.update(
+            sql,
             inspectionNumber,
             inspectionCreateRequest.receiptLineItemID(),
             inspectionCreateRequest.inspectedBy(),
@@ -122,31 +188,15 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
             mockUpdatedById
         );
 
-        // Step 3: Retrieve new ID and timestamps
+        // Step 3: Get inserted ID
         Integer id = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Integer.class);
-        Timestamp now = new Timestamp(System.currentTimeMillis());
 
-        // Step 4: Return full record
-        QualityInspection inspection = new QualityInspection(
-            id,
-            inspectionNumber,
-            inspectionCreateRequest.receiptLineItemID(),
-            inspectionCreateRequest.inspectedBy(),
-            inspectionCreateRequest.inspectionDate(),
-            inspectionCreateRequest.inspectedLocationID(),
-            inspectionCreateRequest.quantity(),
-            inspectionCreateRequest.inspectionResult(),
-            inspectionCreateRequest.notes(),
-            inspectionCreateRequest.status(),
-            mockCreatedById,
-            now,
-            mockUpdatedById,
-            now
-        );
-        
-        // Step 5: Log the activity
+        // Step 4: Get ReceiptID for logging
+        Integer receiptID = importReceiptLineItemService.getReceiptIDByLineItemID(inspectionCreateRequest.receiptLineItemID());
+
+        // Step 5: Log activity
         importActivityLogService.log(
-            id,
+            receiptID,
             mockCreatedById,
             ImportActivityTargetType.QUALITY_INSPECTION.value(),
             ImportActivityActionType.CREATE.value(),
@@ -154,9 +204,13 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
             "Tạo phiếu kiểm tra chất lượng: " + inspectionNumber
         );
 
-        return inspection;
+        // Step 6: Return simple response
+        return new QualityInspectionCreateResponse(
+            id,
+            "Quality Inspection created successfully."
+        );
     }
-    
+        
     @Override
     public boolean canUpdateInspection(Integer inspectionId) {
         String sql = """
@@ -210,77 +264,97 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
     }
 
     @Override
-    @Nullable
-    public QualityInspection updateInspectionPartially(Integer inspectionId, QualityInspectionUpdateRequest request) {
+    public QualityInspectionUpdateResponse updateInspectionPartially(Integer inspectionID, QualityInspectionUpdateRequest request) {
+        Integer mockCreatedById = 3;
+
         List<String> updates = new ArrayList<>();
         List<Object> params = new ArrayList<>();
-    
+
         if (request.inspectedBy() != null) {
             updates.add("InspectedBy = ?");
             params.add(request.inspectedBy());
         }
-    
         if (request.inspectionDate() != null) {
             updates.add("InspectionDate = ?");
             params.add(request.inspectionDate());
         }
-    
         if (request.inspectedLocationID() != null) {
             updates.add("InspectedLocationID = ?");
             params.add(request.inspectedLocationID());
         }
-    
         if (request.quantity() != null) {
             updates.add("Quantity = ?");
             params.add(request.quantity());
         }
-    
         if (request.inspectionResult() != null) {
             updates.add("InspectionResult = ?");
             params.add(request.inspectionResult());
         }
-    
         if (request.notes() != null) {
             updates.add("Notes = ?");
             params.add(request.notes());
         }
-    
         if (request.status() != null) {
             updates.add("Status = ?");
             params.add(request.status());
         }
-    
+
         if (updates.isEmpty()) {
             throw new IllegalArgumentException("No valid fields provided to update.");
         }
-    
+
+        // Update database
         String sql = "UPDATE QualityInspection SET " + String.join(", ", updates) + " WHERE InspectionID = ?";
-        params.add(inspectionId);
-    
+        params.add(inspectionID);
+
         int rows = jdbcTemplate.update(sql, params.toArray());
         if (rows == 0) {
             throw new IllegalStateException("Update failed: no rows affected.");
         }
-    
-        // Fetch updated data
-        String fetchSql = "SELECT * FROM QualityInspection WHERE InspectionID = ?";
-        return jdbcTemplate.queryForObject(fetchSql, new Object[]{inspectionId}, (rs, rowNum) ->
-            new QualityInspection(
-                rs.getInt("InspectionID"),
-                rs.getString("InspectionNumber"),
-                rs.getInt("ReceiptLineItemID"),
-                rs.getInt("InspectedBy"),
-                rs.getDate("InspectionDate"),
-                rs.getObject("InspectedLocationID", Integer.class),
-                rs.getInt("Quantity"),
-                rs.getString("InspectionResult"),
-                rs.getString("Notes"),
-                rs.getString("Status"),
-                rs.getInt("CreatedBy"),
-                rs.getTimestamp("CreatedAt"),
-                rs.getInt("UpdatedBy"),
-                rs.getTimestamp("UpdatedAt")
-            )
+
+        // Log the update
+        Integer receiptID = getReceiptIDFromInspection(inspectionID);
+
+        importActivityLogService.log(
+            receiptID,
+            mockCreatedById, // you should get current user ID from session later
+            ImportActivityTargetType.QUALITY_INSPECTION.value(),
+            ImportActivityActionType.UPDATE.value(),
+            inspectionID,
+            "Cập nhật phiếu kiểm tra chất lượng #" + inspectionID
         );
+
+        // Return simple response
+        return new QualityInspectionUpdateResponse(
+            inspectionID,
+            "Quality Inspection updated successfully."
+        );
+    }
+
+    /**
+     * Get ReceiptID from InspectionID.
+     * 
+     * Steps:
+     * 1. Find ReceiptLineItemID by InspectionID (QualityInspection table).
+     * 2. Find ReceiptID by ReceiptLineItemID (ImportReceiptLineItem table).
+     */
+    public Integer getReceiptIDFromInspection(Integer inspectionID) {
+        // Step 1: Get ReceiptLineItemID
+        String sql1 = "SELECT ReceiptLineItemID FROM QualityInspection WHERE InspectionID = ?";
+        Integer receiptLineItemID = jdbcTemplate.queryForObject(sql1, Integer.class, inspectionID);
+
+        if (receiptLineItemID == null) {
+            throw new IllegalArgumentException("No Receipt Line Item found for Inspection ID: " + inspectionID);
+        }
+
+        // Step 2: Get ReceiptID
+        String sql2 = "SELECT ReceiptID FROM ImportReceiptLineItem WHERE ReceiptLineItemID = ?";
+        Integer receiptID = jdbcTemplate.queryForObject(sql2, Integer.class, receiptLineItemID);
+
+        if (receiptID == null) {
+            throw new IllegalArgumentException("No Receipt found for Receipt Line Item ID: " + receiptLineItemID);
+        }
+
+        return receiptID;
     }
 }

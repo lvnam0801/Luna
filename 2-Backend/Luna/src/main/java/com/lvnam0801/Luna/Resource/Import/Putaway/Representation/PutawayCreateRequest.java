@@ -3,6 +3,7 @@ package com.lvnam0801.Luna.Resource.Import.Putaway.Representation;
 import java.sql.Date;
 
 public record PutawayCreateRequest(
+    Integer receiptID,
     Integer receiptLineItemID,
     Integer locationID,
     Integer putawayBy,
