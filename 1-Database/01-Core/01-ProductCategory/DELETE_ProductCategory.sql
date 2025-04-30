@@ -1,0 +1,2 @@
+DELETE FROM ProductCategory;
+ALTER TABLE ProductCategory AUTO_INCREMENT = 1

@@ -1,19 +1,24 @@
 CREATE TABLE ExportOrderLineItem (
-    OrderLineItemID INT AUTO_INCREMENT PRIMARY KEY,       -- Unique identifier for the line item
-    OrderID INT NOT NULL,                                 -- Associated export order
-    ItemID INT NOT NULL,                                  -- SKU item being exported
-    LineItemNumber INT,                                   -- Line number for sorting/reference
+    OrderLineItemID INT AUTO_INCREMENT PRIMARY KEY,       -- Unique export line item ID
+    OrderID INT NOT NULL,                            -- Reference to ExportOrderHeader
+    ProductID INT NOT NULL,                          -- Product to be exported
+    LineItemNumber VARCHAR(100) NOT NULL UNIQUE,     -- Line identifier (unique within order)
 
-    OrderedQuantity INT NOT NULL,                         -- Quantity ordered by the customer
-    ShippedQuantity INT DEFAULT 0,                        -- Quantity that has been shipped
-    UnitPrice BIGINT,                                     -- Price per unit
-    RequestedDeliveryDate DATE,                           -- Customer's preferred delivery date
-    Notes TEXT,                                           -- Additional details
-    Status ENUM('pending', 'picked', 'packed', 'shipped', 'cancelled') DEFAULT 'pending', -- Order item status
+    ExportedQuantity INT NOT NULL,                   -- Quantity of items to be exported
+    LotNumber VARCHAR(100),                          -- Optional batch/lot tracking
+    ExpirationDate DATE,                             -- For perishables
+    UnitPrice DECIMAL(10,2),                         -- Price per unit for export
 
+    Status ENUM('pending', 'picked', 'packed', 'shipped', 'cancelled') DEFAULT 'pending', -- Fulfillment state
+
+    CreatedBy INT,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    UpdatedBy INT,
     UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     FOREIGN KEY (OrderID) REFERENCES ExportOrderHeader(OrderID) ON DELETE CASCADE,
-    FOREIGN KEY (ItemID) REFERENCES SKUItem(ItemID) ON DELETE CASCADE
+    FOREIGN KEY (ProductID) REFERENCES Product(ProductID) ON DELETE CASCADE,
+    FOREIGN KEY (CreatedBy) REFERENCES User(UserID) ON DELETE SET NULL,
+    FOREIGN KEY (UpdatedBy) REFERENCES User(UserID) ON DELETE SET NULL
 );

@@ -1,86 +1,76 @@
 package com.lvnam0801.Luna.Resource.Export.ExportOrderHeader.Controller;
 
 import com.lvnam0801.Luna.Resource.Export.ExportOrderHeader.Representation.ExportOrderHeader;
-import com.lvnam0801.Luna.Resource.Export.ExportOrderHeader.Representation.ExportOrderHeaderRequest;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.lvnam0801.Luna.Resource.Export.ExportOrderHeader.Representation.ExportOrderHeaderCreateRequest;
+import com.lvnam0801.Luna.Resource.Export.ExportOrderHeader.Representation.ExportOrderHeaderCreateResponse;
+import com.lvnam0801.Luna.Resource.Export.ExportOrderHeader.Representation.ExportOrderHeaderUpdateRequest;
+import com.lvnam0801.Luna.Resource.Export.ExportOrderHeader.Representation.ExportOrderHeaderUpdateResponse;
+import com.lvnam0801.Luna.Resource.Export.ExportOrderHeader.Service.ExportOrderHeaderService;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/export-order")
 public class ExportOrderHeaderController {
-
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private final ExportOrderHeaderService exportOrderHeaderService;
+    public ExportOrderHeaderController(ExportOrderHeaderService exportOrderHeaderService) {
+        this.exportOrderHeaderService = exportOrderHeaderService;
+    }
 
     @GetMapping("/get-all")
-    public ExportOrderHeader[] getExportOrders() {
-        String sql = "SELECT * FROM ExportOrderHeader";
+    public ResponseEntity<?> getAllExportOrders() {
+        try {
+            ExportOrderHeader[] orders = exportOrderHeaderService.getAllExportOrders();
+            return ResponseEntity.ok(orders);
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to fetch export orders: " + e.getMessage());
+        }
+    }
 
-        return jdbcTemplate.query(
-            sql,
-            (rs, rowNum) -> new ExportOrderHeader(
-                rs.getInt("OrderID"),
-                rs.getString("OrderNumber"),
-                rs.getInt("CustomerID"),
-                rs.getObject("CarrierID", Integer.class),
-                rs.getInt("WarehouseID"),
-                rs.getInt("ShippingAddressID"),
-                rs.getDate("OrderDate"),
-                rs.getDate("RequestedDeliveryDate"),
-                rs.getString("ShippingMethod"),
-                rs.getString("OrderStatus"),
-                rs.getString("Notes"),
-                rs.getObject("CreatedBy", Integer.class),
-                rs.getTimestamp("CreatedDate")
-            )
-        ).toArray(ExportOrderHeader[]::new);
+    @GetMapping("/get-by-id/{orderID}")
+    public ResponseEntity<?> getExportOrderById(@PathVariable Integer orderID) {
+        try {
+            ExportOrderHeader order = exportOrderHeaderService.getExportOrderById(orderID);
+            if (order == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                    .body("Export order not found with ID: " + orderID);
+            }
+            return ResponseEntity.ok(order);
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to fetch export order: " + e.getMessage());
+        }
     }
 
     @PostMapping("/create")
-    public ResponseEntity<ExportOrderHeader> createOrder(@RequestBody ExportOrderHeaderRequest request) {
-        String sql = """
-            INSERT INTO ExportOrderHeader (
-                OrderNumber, CustomerID, CarrierID, WarehouseID, ShippingAddressID,
-                OrderDate, RequestedDeliveryDate, ShippingMethod, OrderStatus,
-                Notes, CreatedBy
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """;
+    public ResponseEntity<?> createExportOrder(@RequestBody ExportOrderHeaderCreateRequest request) {
+        try {
+            ExportOrderHeaderCreateResponse response = exportOrderHeaderService.createExportOrder(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Failed to create export order: " + e.getMessage());
+        }
+    }
 
-        jdbcTemplate.update(sql,
-            request.orderNumber(),
-            request.customerID(),
-            request.carrierID(),
-            request.warehouseID(),
-            request.shippingAddressID(),
-            request.orderDate(),
-            request.requestedDeliveryDate(),
-            request.shippingMethod(),
-            request.orderStatus(),
-            request.notes(),
-            request.createdBy()
-        );
-
-        Integer id = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Integer.class);
-
-        ExportOrderHeader newOrder = new ExportOrderHeader(
-            id,
-            request.orderNumber(),
-            request.customerID(),
-            request.carrierID(),
-            request.warehouseID(),
-            request.shippingAddressID(),
-            request.orderDate(),
-            request.requestedDeliveryDate(),
-            request.shippingMethod(),
-            request.orderStatus(),
-            request.notes(),
-            request.createdBy(),
-            null
-        );
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(newOrder);
+    @PatchMapping("/update/{orderID}")
+    public ResponseEntity<?> updateExportOrder(
+        @PathVariable Integer orderID,
+        @RequestBody ExportOrderHeaderUpdateRequest request
+    ) {
+        try {
+            ExportOrderHeaderUpdateResponse response = exportOrderHeaderService.updateExportOrderPartially(orderID, request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Validation error: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body("Failed to update export order: " + e.getMessage());
+        }
     }
 }

@@ -3,6 +3,8 @@ package com.lvnam0801.Luna.Resource.Import.ImportReceiptHeader.Controller;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptHeader.Representation.ImportReceiptHeader;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptHeader.Representation.ImportReceiptHeaderCreateRequest;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptHeader.Representation.ImportReceiptHeaderCreateResponse;
+import com.lvnam0801.Luna.Resource.Import.ImportReceiptHeader.Representation.ImportReceiptHeaderUpdateRequest;
+import com.lvnam0801.Luna.Resource.Import.ImportReceiptHeader.Representation.ImportReceiptHeaderUpdateResponse;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptHeader.Service.ImportReceiptHeaderService;
 
 import org.springframework.http.HttpStatus;
@@ -53,6 +55,22 @@ public class ImportReceiptHeaderController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Failed to create receipt: " + e.getMessage());
+        }
+    }
+
+    @PatchMapping("/update/{receiptID}")
+    public ResponseEntity<?> updateReceipt(
+        @PathVariable Integer receiptID,
+        @RequestBody ImportReceiptHeaderUpdateRequest request
+    ) {
+        try {
+            ImportReceiptHeaderUpdateResponse response = importReceiptHeaderService.updateReceiptPartially(receiptID, request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body("Validation error: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Failed to update receipt: " + e.getMessage());
         }
     }
 }

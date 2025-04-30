@@ -4,7 +4,6 @@ import java.sql.Date;
 
 public record QualityInspectionCreateRequest(
     Integer receiptLineItemID,
-    Integer inspectedBy,
     Date inspectionDate,
     Integer inspectedLocationID,
     Integer quantity,

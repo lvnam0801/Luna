@@ -1,7 +1,7 @@
 package com.lvnam0801.Luna.Resource.Core.WarehouseLocation.Controller;
 
 import com.lvnam0801.Luna.Resource.Core.WarehouseLocation.Representation.WarehouseLocation;
-import com.lvnam0801.Luna.Resource.Core.WarehouseLocation.Representation.WarehouseLocationRequest;
+import com.lvnam0801.Luna.Resource.Core.WarehouseLocation.Representation.WarehouseLocationCreateRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,9 +23,11 @@ public class WarehouseLocationController {
             sql,
             (rs, rowNum) -> new WarehouseLocation(
                 rs.getInt("LocationID"),
+                rs.getString("LocationName"),
                 rs.getString("LocationType"),
-                rs.getString("Value"),
+                rs.getString("StorageType"),
                 rs.getString("Unit"),
+                rs.getInt("Capacity"),
                 rs.getString("Status"),
                 rs.getInt("WarehouseID")
             )
@@ -35,16 +37,18 @@ public class WarehouseLocationController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<WarehouseLocation> createLocation(@RequestBody WarehouseLocationRequest request) {
+    public ResponseEntity<WarehouseLocation> createLocation(@RequestBody WarehouseLocationCreateRequest request) {
         String sql = """
-            INSERT INTO Location (LocationType, Value, Unit, Status, WarehouseID)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO Location (LocationName, LocationType, StorageType, Unit, Capacity, Status, WarehouseID)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """;
 
         jdbcTemplate.update(sql,
+            request.locationName(),
             request.locationType(),
-            request.value(),
+            request.storageType(),
             request.unit(),
+            request.capacity(),
             request.status(),
             request.warehouseID()
         );
@@ -53,9 +57,11 @@ public class WarehouseLocationController {
 
         WarehouseLocation location = new WarehouseLocation(
             id,
+            request.locationName(),
             request.locationType(),
-            request.value(),
+            request.storageType(),
             request.unit(),
+            request.capacity(),
             request.status(),
             request.warehouseID()
         );
@@ -75,9 +81,11 @@ public class WarehouseLocationController {
             new Object[]{warehouseID},
             (rs, rowNum) -> new WarehouseLocation(
                 rs.getInt("LocationID"),
+                rs.getString("LocationName"),
                 rs.getString("LocationType"),
-                rs.getString("Value"),
+                rs.getString("StorageType"),
                 rs.getString("Unit"),
+                rs.getInt("Capacity"),
                 rs.getString("Status"),
                 rs.getInt("WarehouseID")
             )

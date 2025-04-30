@@ -8,6 +8,7 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import com.lvnam0801.Luna.Resource.Core.User.Context.UserContext;
 import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Representation.ImportActivityActionType;
 import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Representation.ImportActivityTargetType;
 import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Service.ImportActivityLogService;
@@ -24,12 +25,14 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
     private final JdbcTemplate jdbcTemplate;
     private final ImportReceiptLineItemService importReceiptLineItemService;
     private final ImportActivityLogService  importActivityLogService;
+    private final UserContext userContext;
 
-    public QualityInspectionServiceImpl(JdbcTemplate jdbcTemplate, ImportReceiptLineItemService importReceiptLineItemService, ImportActivityLogService importActivityLogService)
+    public QualityInspectionServiceImpl(JdbcTemplate jdbcTemplate, ImportReceiptLineItemService importReceiptLineItemService, ImportActivityLogService importActivityLogService, UserContext userContext)
     {
         this.jdbcTemplate = jdbcTemplate;
         this.importReceiptLineItemService = importReceiptLineItemService;
         this.importActivityLogService = importActivityLogService;
+        this.userContext = userContext;
     }
 
     @Override
@@ -40,19 +43,19 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
                 i.InspectionNumber,
                 i.ReceiptLineItemID,
                 i.InspectedBy,
-                ub.UserName AS InspectedByName,
+                ub.FullName AS InspectedByName,
                 i.InspectionDate,
                 i.InspectedLocationID,
-                l.Value AS InspectedLocationName,
+                l.LocationName AS InspectedLocationName,
                 i.Quantity,
                 i.InspectionResult,
                 i.Notes,
                 i.Status,
                 i.CreatedBy,
-                uc.UserName AS CreatedByName,
+                uc.FullName AS CreatedByName,
                 i.CreatedAt,
                 i.UpdatedBy,
-                uu.UserName AS UpdatedByName,
+                uu.FullName AS UpdatedByName,
                 i.UpdatedAt
             FROM QualityInspection i
             LEFT JOIN User ub ON i.InspectedBy = ub.UserID
@@ -95,10 +98,10 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
         String sql = """
             SELECT 
                 i.*, 
-                cu.Name AS CreatedByName,
-                uu.Name AS UpdatedByName,
-                ins.Name AS InspectedByName,
-                l.Value AS InspectedLocationName
+                cu.FullName AS CreatedByName,
+                uu.FullName AS UpdatedByName,
+                ins.FullName AS InspectedByName,
+                l.LocationName AS InspectedLocationName
             FROM QualityInspection i
             LEFT JOIN User cu ON i.CreatedBy = cu.UserID
             LEFT JOIN User uu ON i.UpdatedBy = uu.UserID
@@ -143,11 +146,12 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
             """;
     
         try {
-            return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
+            Boolean result = jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
                 int received = rs.getInt("ReceivedQuantity");
                 int totalInspected = rs.getInt("TotalInspected");
                 return (totalInspected + additionalQuantity) <= received;
             }, receiptLineItemId);
+            return result != null && result;
         } catch (EmptyResultDataAccessException e) {
             // No such line item found
             return false;
@@ -156,9 +160,8 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
 
     @Override
     public QualityInspectionCreateResponse createInspection(QualityInspectionCreateRequest inspectionCreateRequest) {
-        Integer mockCreatedById = 3;
-        Integer mockUpdatedById = 3;
 
+        Integer currentUserId = userContext.getCurrentUserID();
         // Step 1: Generate inspection number
         String inspectionNumber = "INS-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
@@ -177,27 +180,29 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
             sql,
             inspectionNumber,
             inspectionCreateRequest.receiptLineItemID(),
-            inspectionCreateRequest.inspectedBy(),
+            currentUserId,
             inspectionCreateRequest.inspectionDate(),
             inspectionCreateRequest.inspectedLocationID(),
             inspectionCreateRequest.quantity(),
             inspectionCreateRequest.inspectionResult(),
             inspectionCreateRequest.notes(),
             inspectionCreateRequest.status(),
-            mockCreatedById,
-            mockUpdatedById
+            currentUserId,
+            currentUserId
         );
 
         // Step 3: Get inserted ID
         Integer id = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Integer.class);
-
+        if (id == null) {
+            throw new IllegalStateException("Failed to retrieve the last inserted ID.");
+        }
         // Step 4: Get ReceiptID for logging
         Integer receiptID = importReceiptLineItemService.getReceiptIDByLineItemID(inspectionCreateRequest.receiptLineItemID());
 
         // Step 5: Log activity
         importActivityLogService.log(
             receiptID,
-            mockCreatedById,
+            currentUserId,
             ImportActivityTargetType.QUALITY_INSPECTION.value(),
             ImportActivityActionType.CREATE.value(),
             id,
@@ -245,11 +250,12 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
         """;
     
         try {
-            return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
+            Boolean result = jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
                 int receivedQuantity = rs.getInt("ReceivedQuantity");
                 int totalOtherInspected = rs.getInt("TotalOtherInspected");
                 return totalOtherInspected + updatedQuantity <= receivedQuantity;
             }, inspectionId, inspectionId);
+            return result != null && result;
         } catch (EmptyResultDataAccessException e) {
             // If this is the only inspection, fall back to checking received quantity directly
             String fallbackSql = """
@@ -259,21 +265,20 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
                 WHERE q.InspectionID = ?
             """;
             Integer receivedQuantity = jdbcTemplate.queryForObject(fallbackSql, Integer.class, inspectionId);
+            if (receivedQuantity == null) {
+                throw new IllegalArgumentException("No matching inspection found for ID: " + inspectionId);
+            }
             return updatedQuantity <= receivedQuantity;
         }
     }
 
     @Override
     public QualityInspectionUpdateResponse updateInspectionPartially(Integer inspectionID, QualityInspectionUpdateRequest request) {
-        Integer mockCreatedById = 3;
+        Integer currentUserID = userContext.getCurrentUserID();
 
         List<String> updates = new ArrayList<>();
         List<Object> params = new ArrayList<>();
 
-        if (request.inspectedBy() != null) {
-            updates.add("InspectedBy = ?");
-            params.add(request.inspectedBy());
-        }
         if (request.inspectionDate() != null) {
             updates.add("InspectionDate = ?");
             params.add(request.inspectionDate());
@@ -302,6 +307,11 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
         if (updates.isEmpty()) {
             throw new IllegalArgumentException("No valid fields provided to update.");
         }
+        
+        // Always update UpdatedBy and UpdatedAt
+        updates.add("UpdatedBy = ?");
+        params.add(userContext.getCurrentUserID());
+        updates.add("UpdatedAt = CURRENT_TIMESTAMP");
 
         // Update database
         String sql = "UPDATE QualityInspection SET " + String.join(", ", updates) + " WHERE InspectionID = ?";
@@ -314,14 +324,15 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
 
         // Log the update
         Integer receiptID = getReceiptIDFromInspection(inspectionID);
-
+        String inspectionNumber = getInspectionNumberByID(inspectionID);
+        String logMessage = "Cập nhật phiếu kiểm tra chất lượng " + inspectionNumber;
         importActivityLogService.log(
             receiptID,
-            mockCreatedById, // you should get current user ID from session later
+            currentUserID, // you should get current user ID from session later
             ImportActivityTargetType.QUALITY_INSPECTION.value(),
             ImportActivityActionType.UPDATE.value(),
             inspectionID,
-            "Cập nhật phiếu kiểm tra chất lượng #" + inspectionID
+            logMessage
         );
 
         // Return simple response
@@ -356,5 +367,10 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
         }
 
         return receiptID;
+    }
+
+    private String getInspectionNumberByID(Integer inspectionID) {
+        String sql = "SELECT InspectionNumber FROM QualityInspection WHERE InspectionID = ?";
+        return jdbcTemplate.queryForObject(sql, String.class, inspectionID);
     }
 }

@@ -22,7 +22,7 @@ public class QualityInspectionController {
         this.qualityInspectionService = qualityInspectionService;
     }
 
-    @GetMapping("/get-by-line/{receiptLineItemID}")
+    @GetMapping("/get-by-receipt-line/{receiptLineItemID}")
     public ResponseEntity<?> getByLineItem(@PathVariable Integer receiptLineItemID) {
         try {
             QualityInspection[] qualityInspections = qualityInspectionService.getByLineItem(receiptLineItemID);

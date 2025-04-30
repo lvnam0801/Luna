@@ -3,6 +3,7 @@ CREATE TABLE SKUItem (
     SKU VARCHAR(100) NOT NULL UNIQUE,       -- Unique SKU code
     Quantity INT NOT NULL DEFAULT 0,        -- Quantity available
     ProductID INT NOT NULL,                 -- Reference to Product table
+    Status ENUM('in_stock', 'quarantined', 'archived', 'inactive') DEFAULT 'in_stock',
 
     FOREIGN KEY (ProductID) REFERENCES Product(ProductID) ON DELETE CASCADE,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

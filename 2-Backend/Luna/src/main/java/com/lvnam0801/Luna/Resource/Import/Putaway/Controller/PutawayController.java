@@ -3,6 +3,8 @@ package com.lvnam0801.Luna.Resource.Import.Putaway.Controller;
 import com.lvnam0801.Luna.Resource.Import.Putaway.Representation.Putaway;
 import com.lvnam0801.Luna.Resource.Import.Putaway.Representation.PutawayCreateRequest;
 import com.lvnam0801.Luna.Resource.Import.Putaway.Representation.PutawayCreateResponse;
+import com.lvnam0801.Luna.Resource.Import.Putaway.Representation.PutawayUpdateRequest;
+import com.lvnam0801.Luna.Resource.Import.Putaway.Representation.PutawayUpdateResponse;
 import com.lvnam0801.Luna.Resource.Import.Putaway.Service.PutawayService;
 
 import org.springframework.dao.DataAccessException;
@@ -61,7 +63,7 @@ public class PutawayController {
         try {
             // Step 1: Validate required fields
             if (request.receiptLineItemID() == null || request.quantity() == null ||
-                request.putawayResult() == null || request.status() == null || request.putawayBy() == null) {
+                request.putawayResult() == null || request.status() == null) {
                 return ResponseEntity.badRequest().body("Missing required fields.");
             }
 
@@ -70,7 +72,7 @@ public class PutawayController {
                 return ResponseEntity.badRequest().body("Quantity must be greater than 0.");
             }
 
-            if (putawayService.isLineItemFinalized(request.receiptLineItemID())) {
+            if (!putawayService.isPutawayEditable(request.receiptLineItemID())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("This line item is finalized. No further putaway allowed.");
             }
 
@@ -97,6 +99,52 @@ public class PutawayController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Unexpected error occurred while creating putaway: " + e.getMessage());
+        }
+    }
+
+
+    @PatchMapping("/update/{putawayID}")
+    public ResponseEntity<?> updatePutaway(@PathVariable Integer putawayID, @RequestBody PutawayUpdateRequest request) {
+        try {
+            // Step 1: Validate required fields
+            if (putawayID == null) {
+                return ResponseEntity.badRequest().body("Missing required path variable: putawayID.");
+            }
+
+            if (request.quantity() == null || request.putawayResult() == null || request.status() == null) {
+                return ResponseEntity.badRequest().body("Missing required fields in request body.");
+            }
+
+            // Step 2: Business validations
+            if (request.quantity() <= 0) {
+                return ResponseEntity.badRequest().body("Quantity must be greater than 0.");
+            }
+
+            if (!putawayService.isPutawayEditable(putawayID)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Putaway is finalized. No further updates allowed.");
+            }
+
+            if (!putawayService.canUpdatePutawayQuantityAgainstReceived(putawayID, request.quantity())) {
+                return ResponseEntity.badRequest().body("Updated putaway quantity exceeds the received quantity.");
+            }
+
+            if (!putawayService.canUpdatePutawayQuantityByResultType(putawayID, request.putawayResult(), request.quantity())) {
+                return ResponseEntity.badRequest().body("Updated putaway quantity exceeds inspected quantity of type: " + request.putawayResult());
+            }
+
+            // Step 3: Update Putaway
+            PutawayUpdateResponse response = putawayService.updatePutawayPartially(putawayID, request);
+
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body("Validation error: " + e.getMessage());
+        } catch (DataAccessException dae) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Database error occurred while updating putaway: " + dae.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Unexpected error occurred while updating putaway: " + e.getMessage());
         }
     }
 }

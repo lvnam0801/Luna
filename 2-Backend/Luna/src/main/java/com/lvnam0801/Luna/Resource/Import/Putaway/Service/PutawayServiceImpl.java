@@ -1,14 +1,17 @@
 package com.lvnam0801.Luna.Resource.Import.Putaway.Service;
 
-import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import com.lvnam0801.Luna.Resource.Core.SKUItem.Representation.SKUItemRequest;
+import com.lvnam0801.Luna.Resource.Core.SKUItem.Representation.SKUItemCreateRequest;
+import com.lvnam0801.Luna.Resource.Core.SKUItem.Representation.SKUItemCreateResponse;
 import com.lvnam0801.Luna.Resource.Core.SKUItem.Service.SKUItemService;
+import com.lvnam0801.Luna.Resource.Core.User.Context.UserContext;
 import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Representation.ImportActivityActionType;
 import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Representation.ImportActivityTargetType;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Service.ImportReceiptLineItemService;
@@ -16,6 +19,8 @@ import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Service.ImportActivi
 import com.lvnam0801.Luna.Resource.Import.Putaway.Representation.Putaway;
 import com.lvnam0801.Luna.Resource.Import.Putaway.Representation.PutawayCreateRequest;
 import com.lvnam0801.Luna.Resource.Import.Putaway.Representation.PutawayCreateResponse;
+import com.lvnam0801.Luna.Resource.Import.Putaway.Representation.PutawayUpdateRequest;
+import com.lvnam0801.Luna.Resource.Import.Putaway.Representation.PutawayUpdateResponse;
 
 @Service
 public class PutawayServiceImpl implements PutawayService{
@@ -23,15 +28,18 @@ public class PutawayServiceImpl implements PutawayService{
     private final SKUItemService skuItemService;
     private final ImportReceiptLineItemService importReceiptLineItemService;
     private final ImportActivityLogService importActivityLogService;
+    private final UserContext userContext;
 
-    public PutawayServiceImpl(JdbcTemplate jdbcTemplate, SKUItemService skuItemService, ImportReceiptLineItemService importReceiptLineItemService, ImportActivityLogService importActivityLogService)
+    public PutawayServiceImpl(JdbcTemplate jdbcTemplate, SKUItemService skuItemService, ImportReceiptLineItemService importReceiptLineItemService, ImportActivityLogService importActivityLogService, UserContext userContext)
     {
         this.jdbcTemplate = jdbcTemplate;
         this.skuItemService = skuItemService;
         this.importReceiptLineItemService = importReceiptLineItemService;
         this.importActivityLogService = importActivityLogService;
+        this.userContext = userContext;
     }
 
+    // ----------GET PUTAWAY----------
     @Override
     public Putaway[] getByReceiptLine(Integer receiptLineItemID) {
         String sql = """
@@ -39,8 +47,8 @@ public class PutawayServiceImpl implements PutawayService{
                 p.PutawayID,
                 p.PutawayNumber,
                 p.ReceiptLineItemID,
-                p.PutawayAtLocation,
-                loc.Value AS PutawayAtLocationName,
+                p.PutawayAtLocationID,
+                loc.LocationName AS PutawayAtLocationName,
                 p.SKUItemID,
                 s.SKU AS SKU,
                 p.Quantity,
@@ -56,7 +64,7 @@ public class PutawayServiceImpl implements PutawayService{
                 u3.FullName AS UpdatedByName,
                 p.UpdatedAt
             FROM Putaway p
-            LEFT JOIN Location loc ON p.PutawayAtLocation = loc.LocationID
+            LEFT JOIN Location loc ON p.PutawayAtLocationID = loc.LocationID
             LEFT JOIN SKUItem s ON p.SKUItemID = s.ItemID
             LEFT JOIN User u1 ON p.PutawayBy = u1.UserID
             LEFT JOIN User u2 ON p.CreatedBy = u2.UserID
@@ -71,7 +79,7 @@ public class PutawayServiceImpl implements PutawayService{
                 rs.getInt("PutawayID"),
                 rs.getString("PutawayNumber"),
                 rs.getInt("ReceiptLineItemID"),
-                rs.getInt("PutawayAtLocation"),
+                rs.getInt("PutawayAtLocationID"),
                 rs.getString("PutawayAtLocationName"),
                 rs.getInt("SKUItemID"),
                 rs.getString("SKU"),
@@ -98,55 +106,59 @@ public class PutawayServiceImpl implements PutawayService{
                 p.PutawayID,
                 p.PutawayNumber,
                 p.ReceiptLineItemID,
-                p.PutawayAtLocation,
-                loc.Value AS PutawayAtLocationName,
+                p.PutawayAtLocationID,
+                loc.LocationName AS PutawayAtLocationName,
                 p.SKUItemID,
-                sku.Name AS SKUItemName,
+                sku.SKU AS SKUValue,
                 p.Quantity,
                 p.PutawayResult,
                 p.Status,
                 p.PutawayBy,
-                u1.FullName AS PutawayByName,
+                CONCAT(u1.FirstName, ' ', u1.LastName) AS PutawayByName,
                 p.PutawayDate,
                 p.CreatedBy,
-                u2.FullName AS CreatedByName,
+                CONCAT(u2.FirstName, ' ', u2.LastName) AS CreatedByName,
                 p.CreatedAt,
                 p.UpdatedBy,
-                u3.FullName AS UpdatedByName,
+                CONCAT(u3.FirstName, ' ', u3.LastName) AS UpdatedByName,
                 p.UpdatedAt
             FROM Putaway p
-            LEFT JOIN Location loc ON p.PutawayAtLocation = loc.LocationID
+            LEFT JOIN Location loc ON p.PutawayAtLocationID = loc.LocationID
             LEFT JOIN SKUItem sku ON p.SKUItemID = sku.ItemID
-            LEFT JOIN Product prod ON sku.ProductID = prod.ProductID
             LEFT JOIN User u1 ON p.PutawayBy = u1.UserID
             LEFT JOIN User u2 ON p.CreatedBy = u2.UserID
             LEFT JOIN User u3 ON p.UpdatedBy = u3.UserID
             WHERE p.PutawayID = ?
-        """;
-
-        return jdbcTemplate.queryForObject(sql, new Object[]{putawayID}, (rs, rowNum) -> new Putaway(
-            rs.getInt("PutawayID"),
-            rs.getString("PutawayNumber"),
-            rs.getInt("ReceiptLineItemID"),
-            rs.getInt("PutawayAtLocation"),
-            rs.getString("PutawayAtLocationName"),
-            rs.getInt("SKUItemID"),
-            rs.getString("SKUItemName"),
-            rs.getInt("Quantity"),
-            rs.getString("PutawayResult"),
-            rs.getString("Status"),
-            rs.getInt("PutawayBy"),
-            rs.getString("PutawayByName"),
-            rs.getDate("PutawayDate"),
-            rs.getInt("CreatedBy"),
-            rs.getString("CreatedByName"),
-            rs.getTimestamp("CreatedAt"),
-            rs.getInt("UpdatedBy"),
-            rs.getString("UpdatedByName"),
-            rs.getTimestamp("UpdatedAt")
-        ));
+            """;
+    
+        return jdbcTemplate.queryForObject(
+            sql,
+            new Object[]{putawayID},
+            (rs, rowNum) -> new Putaway(
+                rs.getInt("PutawayID"),
+                rs.getString("PutawayNumber"),
+                rs.getInt("ReceiptLineItemID"),
+                rs.getInt("PutawayAtLocationID"),
+                rs.getString("PutawayAtLocationName"),
+                rs.getInt("SKUItemID"),
+                rs.getString("SKUValue"),
+                rs.getInt("Quantity"),
+                rs.getString("PutawayResult"),
+                rs.getString("Status"),
+                rs.getInt("PutawayBy"),
+                rs.getString("PutawayByName"),
+                rs.getDate("PutawayDate"),
+                rs.getInt("CreatedBy"),
+                rs.getString("CreatedByName"),
+                rs.getTimestamp("CreatedAt"),
+                rs.getInt("UpdatedBy"),
+                rs.getString("UpdatedByName"),
+                rs.getTimestamp("UpdatedAt")
+            )
+        );
     }
 
+    // ----------CREATE PUTAWAY----------
     @Override
     public boolean canPutawayByResultType(Integer receiptLineItemID, String putawayResult, Integer putawayQuantity) {
         // Map to corresponding inspection result
@@ -199,7 +211,7 @@ public class PutawayServiceImpl implements PutawayService{
     }
 
     @Override
-    public boolean isLineItemFinalized(Integer receiptLineItemID) {
+    public boolean isPutawayEditable(Integer receiptLineItemID) {
         String sql = """
             SELECT Status
             FROM ImportReceiptLineItem
@@ -208,7 +220,9 @@ public class PutawayServiceImpl implements PutawayService{
 
         try {
             String status = jdbcTemplate.queryForObject(sql, String.class, receiptLineItemID);
-            return "stored".equalsIgnoreCase(status) || "quarantined".equalsIgnoreCase(status);
+            System.out.println("ReceiptLineItemID: " + receiptLineItemID + ", Status: " + status);
+            boolean isFinalized = "completed".equalsIgnoreCase(status) || "cancelled".equalsIgnoreCase(status);
+            return !isFinalized;
         } catch (EmptyResultDataAccessException e) {
             // Line item not found, treat as not finalized (or handle differently if needed)
             return false;
@@ -216,67 +230,51 @@ public class PutawayServiceImpl implements PutawayService{
     }
 
     @Override
-    public PutawayCreateResponse createPutaway(PutawayCreateRequest request) {
+    public PutawayCreateResponse createPutaway(PutawayCreateRequest request) 
+    {
         // Step 1: Determine SKUItem status based on PutawayResult
-        String skuItemStatus;
-        if ("stored".equalsIgnoreCase(request.putawayResult())) {
-            skuItemStatus = "in_stock";
-        } else if ("quarantined".equalsIgnoreCase(request.putawayResult())) {
-            skuItemStatus = "quarantined";
-        } else {
-            throw new IllegalArgumentException("Invalid putawayResult value.");
+        Integer skuItemID = null;
+        if ("completed".equalsIgnoreCase(request.status()))
+        {
+            skuItemID = createSKUItemFromPutaway(request.putawayResult(), request.receiptLineItemID(), request.quantity());
         }
 
-        // Step 2: Lookup ProductID using ReceiptLineItemID
-        String productQuery = "SELECT ProductID FROM ImportReceiptLineItem WHERE ReceiptLineItemID = ?";
-        Integer productID = jdbcTemplate.queryForObject(productQuery, Integer.class, request.receiptLineItemID());
-        if (productID == null) {
-            throw new IllegalArgumentException("Invalid receiptLineItemID: ProductID not found.");
-        }
-
-        // Step 3: Create SKUItem
-        SKUItemRequest skuItemRequest = new SKUItemRequest(
-            productID,
-            request.quantity(),
-            skuItemStatus
-        );
-        Integer skuItemID = skuItemService.createSKUItem(skuItemRequest);
-
-        // Step 4: Generate unique PutawayNumber
+        // Step 2: Generate unique PutawayNumber
         String putawayNumber = "PUT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-
-        // Step 5: Insert Putaway with new SKUItemID and PutawayNumber
+        Integer currentUserId = userContext.getCurrentUserID();
+        // Step 3: Insert Putaway with new SKUItemID and PutawayNumber
         String sql = """
             INSERT INTO Putaway (
-                PutawayNumber, ReceiptLineItemID, PutawayAtLocation, SKUItemID, PutawayBy,
+                PutawayNumber, ReceiptLineItemID, PutawayAtLocationID, SKUItemID, PutawayBy,
                 Quantity, PutawayResult, Status, PutawayDate, CreatedBy, UpdatedBy
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
-
-        Integer mockUserId = request.putawayBy(); // Assume you have user context
-
+        
         jdbcTemplate.update(sql,
             putawayNumber,
             request.receiptLineItemID(),
-            request.locationID(),
+            request.putawayAtLocationID(),
             skuItemID,
-            mockUserId,
+            currentUserId,
             request.quantity(),
             request.putawayResult(),
             request.status(),
             request.putawayDate(),
-            mockUserId,
-            mockUserId
+            currentUserId,
+            currentUserId
         );
 
-        // Step 6: Get the inserted Putaway ID
+        // Step 4: Get the inserted Putaway ID
         Integer id = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Integer.class);
+        if (id == null) {
+            throw new IllegalStateException("Failed to retrieve the last inserted Putaway ID.");
+        }
 
-        // Step 7: Log the activity
+        // Step 5: Log the activity
         Integer receiptID = importReceiptLineItemService.getReceiptIDByLineItemID(request.receiptLineItemID());
         importActivityLogService.log(
             receiptID,
-            mockUserId,
+            currentUserId,
             ImportActivityTargetType.PUTAWAY.value(),
             ImportActivityActionType.CREATE.value(),
             id,
@@ -287,6 +285,236 @@ public class PutawayServiceImpl implements PutawayService{
         return new PutawayCreateResponse(
             id,
             "Putaway created successfully."
+        );
+    }
+
+    private Integer createSKUItemFromPutaway(String putawayResult, Integer receiptLineItemID, Integer putawayQuantity)
+    {
+        // Step 1: Determine SKUItem status based on PutawayResult
+        String skuItemStatus;
+        if ("stored".equalsIgnoreCase(putawayResult)) {
+            skuItemStatus = "in_stock";
+        } else if ("quarantined".equalsIgnoreCase(putawayResult)) {
+            skuItemStatus = "quarantined";
+        } else {
+            throw new IllegalArgumentException("Invalid putawayResult value.");
+        }
+        Integer productID = getProductIDByLineItemID(receiptLineItemID);
+
+        // Step 3: Create SKUItem
+        SKUItemCreateRequest skuItemRequest = new SKUItemCreateRequest(
+            productID,
+            putawayQuantity,
+            skuItemStatus
+        );
+
+        SKUItemCreateResponse createdSKUItem = skuItemService.createSKUItem(skuItemRequest);
+        Integer receiptID = importReceiptLineItemService.getReceiptIDByLineItemID(receiptLineItemID);
+
+        // Step 4: Log the activity
+
+        importActivityLogService.log(
+            receiptID,
+            userContext.getCurrentUserID(),
+            ImportActivityTargetType.SKU_ITEM.value(),
+            ImportActivityActionType.CREATE.value(),
+            createdSKUItem.itemID(),
+            "Tạo SKUItem: " + createdSKUItem.sku() + " với số lượng: " + putawayQuantity
+        );
+        return createdSKUItem.itemID();
+    }
+
+    private Integer getProductIDByLineItemID(Integer receiptLineItemID) 
+    {
+        String productQuery = "SELECT ProductID FROM ImportReceiptLineItem WHERE ReceiptLineItemID = ?";
+        Integer productID = jdbcTemplate.queryForObject (productQuery, Integer.class, receiptLineItemID);
+        if (productID == null)
+        {
+            throw new IllegalArgumentException("Invalid receiptLineItemID: ProductID not found.");
+        }
+        return productID;
+    }
+    
+    // ----------UPDATE PUTAWAY----------
+    @Override
+    public boolean canUpdatePutawayQuantityAgainstReceived(Integer putawayID, Integer newQuantity) {
+        Integer receiptLineItemID = jdbcTemplate.queryForObject(
+            "SELECT ReceiptLineItemID FROM Putaway WHERE PutawayID = ?",
+            Integer.class,
+            putawayID
+        );
+
+        String sql = """
+            SELECT
+                i.ReceivedQuantity,
+                COALESCE(SUM(p.Quantity), 0) AS TotalPutaway,
+                (SELECT Quantity FROM Putaway WHERE PutawayID = ?) AS CurrentPutawayQty
+            FROM ImportReceiptLineItem i
+            LEFT JOIN Putaway p ON i.ReceiptLineItemID = p.ReceiptLineItemID AND p.Status != 'cancelled'
+            WHERE i.ReceiptLineItemID = ?
+            GROUP BY i.ReceivedQuantity
+        """;
+
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
+            Integer receivedQty = rs.getObject("ReceivedQuantity", Integer.class);
+            Integer totalPutawayQty = rs.getObject("TotalPutaway", Integer.class);
+            Integer currentPutawayQty = rs.getObject("CurrentPutawayQty", Integer.class);
+
+            receivedQty = (receivedQty != null) ? receivedQty : 0;
+            totalPutawayQty = (totalPutawayQty != null) ? totalPutawayQty : 0;
+            currentPutawayQty = (currentPutawayQty != null) ? currentPutawayQty : 0;
+
+            // Adjust totalPutaway: remove old, add new
+            int adjustedPutawayQty = (totalPutawayQty - currentPutawayQty) + newQuantity;
+
+            return adjustedPutawayQty <= receivedQty;
+        }, putawayID, receiptLineItemID));
+    }
+
+    @Override
+    public boolean canUpdatePutawayQuantityByResultType(Integer putawayID, String putawayResult, Integer newQuantity) {
+        // Map result type
+        String inspectionResult;
+        if ("stored".equalsIgnoreCase(putawayResult)) {
+            inspectionResult = "passed";
+        } else if ("quarantined".equalsIgnoreCase(putawayResult)) {
+            inspectionResult = "failed";
+        } else {
+            return false; // invalid result
+        }
+
+        Integer receiptLineItemID = jdbcTemplate.queryForObject(
+            "SELECT ReceiptLineItemID FROM Putaway WHERE PutawayID = ?",
+            Integer.class,
+            putawayID
+        );
+
+        String sql = """
+            SELECT
+                (SELECT SUM(Quantity) FROM QualityInspection WHERE ReceiptLineItemID = ? AND InspectionResult = ?) AS TotalInspected,
+                (SELECT SUM(Quantity) FROM Putaway WHERE ReceiptLineItemID = ? AND PutawayResult = ? AND Status != 'cancelled') AS TotalPutaway,
+                (SELECT Quantity FROM Putaway WHERE PutawayID = ?) AS CurrentPutawayQty
+        """;
+
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
+            Integer totalInspected = rs.getObject("TotalInspected", Integer.class);
+            Integer totalPutaway = rs.getObject("TotalPutaway", Integer.class);
+            Integer currentPutawayQty = rs.getObject("CurrentPutawayQty", Integer.class);
+
+            totalInspected = (totalInspected != null) ? totalInspected : 0;
+            totalPutaway = (totalPutaway != null) ? totalPutaway : 0;
+            currentPutawayQty = (currentPutawayQty != null) ? currentPutawayQty : 0;
+
+            int adjustedPutawayQty = (totalPutaway - currentPutawayQty) + newQuantity;
+
+            return adjustedPutawayQty <= totalInspected;
+        }, receiptLineItemID, inspectionResult, receiptLineItemID, putawayResult, putawayID));
+    }
+
+    @Override
+    public PutawayUpdateResponse updatePutawayPartially(Integer putawayID, PutawayUpdateRequest request) {
+        // Step 1: Fetch current Putaway
+        String fetchSql = "SELECT * FROM Putaway WHERE PutawayID = ?";
+        Putaway existingPutaway = jdbcTemplate.queryForObject(
+            fetchSql,
+            new Object[]{putawayID},
+            (rs, rowNum) -> new Putaway(
+                rs.getInt("PutawayID"),
+                rs.getString("PutawayNumber"),
+                rs.getInt("ReceiptLineItemID"),
+                rs.getInt("PutawayAtLocationID"),
+                null, // putawayAtLocationName
+                rs.getObject("SKUItemID", Integer.class),
+                null, // SKU
+                rs.getInt("Quantity"),
+                rs.getString("PutawayResult"),
+                rs.getString("Status"),
+                rs.getInt("PutawayBy"),
+                null, // putawayByName
+                rs.getDate("PutawayDate"),
+                rs.getInt("CreatedBy"),
+                null, // createdByName
+                rs.getTimestamp("CreatedAt"),
+                rs.getInt("UpdatedBy"),
+                null, // updatedByName
+                rs.getTimestamp("UpdatedAt")
+            )
+        );
+
+        if (existingPutaway == null) {
+            throw new IllegalArgumentException("Putaway not found with ID: " + putawayID);
+        }
+    
+        // Step 2: Check current status
+        if ("completed".equalsIgnoreCase(existingPutaway.status()) || "cancelled".equalsIgnoreCase(existingPutaway.status())) {
+            throw new IllegalStateException("Cannot update a completed or cancelled Putaway.");
+        }
+    
+        // Step 3: Build dynamic update SQL
+        List<String> updates = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
+    
+        if (request.putawayAtLocationID() != null) {
+            updates.add("PutawayAtLocationID = ?");
+            params.add(request.putawayAtLocationID());
+        }
+        if (request.quantity() != null) {
+            updates.add("Quantity = ?");
+            params.add(request.quantity());
+        }
+        if (request.putawayResult() != null) {
+            updates.add("PutawayResult = ?");
+            params.add(request.putawayResult());
+        }
+        if (request.status() != null) {
+            updates.add("Status = ?");
+            params.add(request.status());
+        }
+        if (request.putawayDate() != null) {
+            updates.add("PutawayDate = ?");
+            params.add(request.putawayDate());
+        }
+    
+        // Step 4: Handle SKUItem creation if status moved to 'completed' and SKUItemID is null
+        Integer skuItemID = existingPutaway.skuItemID();
+        if ("completed".equalsIgnoreCase(request.status()) && skuItemID == null) {
+            skuItemID = createSKUItemFromPutaway(existingPutaway.putawayResult(), existingPutaway.receiptLineItemID(), existingPutaway.quantity());
+            updates.add("SKUItemID = ?");
+            params.add(skuItemID);
+        }
+    
+        // Always update UpdatedBy and UpdatedAt
+        updates.add("UpdatedBy = ?");
+        params.add(userContext.getCurrentUserID());
+        updates.add("UpdatedAt = CURRENT_TIMESTAMP");
+    
+        // Step 5: Finalize and execute update
+        if (updates.isEmpty()) {
+            throw new IllegalArgumentException("No valid fields provided for update.");
+        }
+    
+        String updateSql = "UPDATE Putaway SET " + String.join(", ", updates) + " WHERE PutawayID = ?";
+        params.add(putawayID);
+    
+        int rows = jdbcTemplate.update(updateSql, params.toArray());
+        if (rows == 0) {
+            throw new IllegalStateException("Update failed: no rows affected.");
+        }
+
+        // Step 6: Log the activity
+        Integer receiptID = importReceiptLineItemService.getReceiptIDByLineItemID(existingPutaway.receiptLineItemID());
+        importActivityLogService.log(
+            receiptID,
+            userContext.getCurrentUserID(),
+            ImportActivityTargetType.PUTAWAY.value(),
+            ImportActivityActionType.UPDATE.value(),
+            putawayID,
+            "Cập nhật phiếu putaway: " + existingPutaway.putawayNumber()
+        );
+    
+        return new PutawayUpdateResponse(
+            putawayID,
+            "Putaway updated successfully."
         );
     }
 }

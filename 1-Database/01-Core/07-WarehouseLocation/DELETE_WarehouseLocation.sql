@@ -1,0 +1,2 @@
+DELETE FROM Location;
+ALTER TABLE Location AUTO_INCREMENT = 1;

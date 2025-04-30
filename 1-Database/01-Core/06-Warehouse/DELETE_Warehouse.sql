@@ -1,0 +1,2 @@
+DELETE FROM Warehouse;
+ALTER TABLE Warehouse AUTO_INCREMENT = 1;

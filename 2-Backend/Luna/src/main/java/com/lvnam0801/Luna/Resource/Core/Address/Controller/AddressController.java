@@ -1,7 +1,7 @@
 package com.lvnam0801.Luna.Resource.Core.Address.Controller;
 
 import com.lvnam0801.Luna.Resource.Core.Address.Representation.Address;
-import com.lvnam0801.Luna.Resource.Core.Address.Representation.AddressRequest;
+import com.lvnam0801.Luna.Resource.Core.Address.Representation.AddressCreateRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +33,7 @@ public class AddressController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<Address> createAddress(@RequestBody AddressRequest request) {
+    public ResponseEntity<Address> createAddress(@RequestBody AddressCreateRequest request) {
         String sql = """
             INSERT INTO Address (StreetAddress, City, StateProvince, PostalCode, Country)
             VALUES (?, ?, ?, ?, ?)

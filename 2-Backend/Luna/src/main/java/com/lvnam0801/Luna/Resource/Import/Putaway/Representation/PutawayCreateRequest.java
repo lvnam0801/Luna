@@ -5,8 +5,7 @@ import java.sql.Date;
 public record PutawayCreateRequest(
     Integer receiptID,
     Integer receiptLineItemID,
-    Integer locationID,
-    Integer putawayBy,
+    Integer putawayAtLocationID,
     Integer quantity,
     String putawayResult, // 'stored' or 'quarantined'
     String status,        // 'pending', 'completed', 'cancelled'

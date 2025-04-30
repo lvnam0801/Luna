@@ -25,6 +25,6 @@ public class SKUGenerator {
         String year = String.valueOf(Year.now().getValue());
         String sequence = String.format("%04d", count + 1);
 
-        return "SKU-" + productCode + "-" + year + "-" + sequence;
+        return productCode + "-" + year + "-" + sequence;
     }
 }

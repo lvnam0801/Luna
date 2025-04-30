@@ -7,7 +7,7 @@ public record Putaway(
     Integer putawayID,
     String putawayNumber,
     Integer receiptLineItemID,
-    Integer putawayAtLocation,
+    Integer putawayAtLocationID,
     String putawayAtLocationName, // get from location
     Integer skuItemID,
     String SKU,         // from SKUItem table

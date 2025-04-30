@@ -1,6 +1,6 @@
 CREATE TABLE Party (
     PartyID INT AUTO_INCREMENT PRIMARY KEY,       -- Unique identifier
-    PartyType VARCHAR(100) NOT NULL,              -- Type of party (e.g., Supplier, Carrier, Customer)
+    PartyType ENUM('supplier', 'carrier', 'customer', 'internal', 'other') NOT NULL, -- Type of party
     ContactName VARCHAR(255),                     -- Name of the contact person
     Phone VARCHAR(20),                            -- Phone number
     Email VARCHAR(255),                           -- Email address

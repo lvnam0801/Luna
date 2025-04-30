@@ -1,0 +1,2 @@
+DELETE FROM Manufacturer;
+ALTER TABLE Manufacturer AUTO_INCREMENT = 1

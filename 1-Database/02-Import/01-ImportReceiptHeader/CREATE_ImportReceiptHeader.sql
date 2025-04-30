@@ -6,19 +6,24 @@ CREATE TABLE ImportReceiptHeader (
     OriginLocationID INT,                                     -- Foreign key to Address table
     ExpectedArrivalDate DATE,
     ActualArrivalDate DATE,
-    ReceivingDock VARCHAR(100),
     ReceiptStatus ENUM('pending', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
     Notes TEXT,
-    CreatedDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     CarrierID INT,
     SupplierID INT,
     WarehouseID INT NOT NULL,
+    ReceivingDockID INT NULL,
     CreatedBy INT,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UpdatedBy INT,
+    UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    Status ENUM('active', 'inactive') DEFAULT 'active',
 
     FOREIGN KEY (OriginLocationID) REFERENCES Address(AddressID) ON DELETE SET NULL,
     FOREIGN KEY (CarrierID) REFERENCES Party(PartyID) ON DELETE SET NULL,
     FOREIGN KEY (SupplierID) REFERENCES Party(PartyID) ON DELETE SET NULL,
     FOREIGN KEY (WarehouseID) REFERENCES Warehouse(WarehouseID) ON DELETE CASCADE,
-    FOREIGN KEY (CreatedBy) REFERENCES User(UserID) ON DELETE SET NULL
+    FOREIGN KEY (ReceivingDockID) REFERENCES Location(LocationID) ON DELETE SET NULL,
+    FOREIGN KEY (CreatedBy) REFERENCES User(UserID) ON DELETE SET NULL,
+    FOREIGN KEY (UpdatedBy) REFERENCES User(UserID) ON DELETE SET NULL
 );

@@ -14,5 +14,6 @@ public record ImportReceiptHeaderCreateRequest(
     Integer carrierID,
     Integer supplierID,
     Integer warehouseID,
-    String receivingDockID
+    Integer receivingDockID,
+    String status
 ) {}

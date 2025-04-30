@@ -1,6 +1,6 @@
 package com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Representation;
 
-import java.time.LocalDateTime;
+import java.sql.Timestamp;
 
 public record ImportActivityLog(
     Integer activityLogID,
@@ -10,7 +10,7 @@ public record ImportActivityLog(
     String targetType,
     String actionType,
     Integer targetID,
-    LocalDateTime loggedTime,
+    Timestamp loggedTime,
     String content,
     String status
 ) {}

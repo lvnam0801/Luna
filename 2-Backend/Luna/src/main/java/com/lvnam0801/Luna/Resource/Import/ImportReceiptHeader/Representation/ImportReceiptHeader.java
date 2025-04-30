@@ -20,6 +20,7 @@ public record ImportReceiptHeader(
     Date actualArrivalDate,
     String receiptStatus,
     String notes,
+    String status,
     
     // From Party table
     Integer carrierID,
@@ -36,6 +37,9 @@ public record ImportReceiptHeader(
 
 
     Integer createdBy,
+    String createdByName,
     Timestamp createdAt,
+    Integer updatedBy,
+    String updatedByName,
     Timestamp updatedAt
 ) {}

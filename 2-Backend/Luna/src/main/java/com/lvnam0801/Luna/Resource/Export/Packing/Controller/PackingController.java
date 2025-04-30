@@ -1,75 +1,80 @@
 package com.lvnam0801.Luna.Resource.Export.Packing.Controller;
 
-import com.lvnam0801.Luna.Resource.Export.Packing.Representation.Packing;
-import com.lvnam0801.Luna.Resource.Export.Packing.Representation.PackingRequest;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.lvnam0801.Luna.Resource.Export.Packing.Representation.PackingCreateRequest;
+import com.lvnam0801.Luna.Resource.Export.Packing.Representation.PackingDetailCreateRequest;
+import com.lvnam0801.Luna.Resource.Export.Packing.Representation.PackingUpdateRequest;
+import com.lvnam0801.Luna.Resource.Export.Packing.Service.PackingService;
 
 @RestController
 @RequestMapping("/api/packing")
 public class PackingController {
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private final PackingService packingService;
 
-    @GetMapping("/get-by-order/{orderID}")
-    public Packing[] getByOrder(@PathVariable Integer orderID) {
-        String sql = "SELECT * FROM Packing WHERE OrderID = ?";
+    public PackingController(PackingService packingService) {
+        this.packingService = packingService;
+    }
 
-        return jdbcTemplate.query(
-            sql,
-            new Object[]{orderID},
-            (rs, rowNum) -> new Packing(
-                rs.getInt("PackingID"),
-                rs.getInt("OrderID"),
-                rs.getInt("PackedBy"),
-                rs.getDate("PackingDate"),
-                rs.getString("PackageNumber"),
-                rs.getDouble("PackageWeight"),
-                rs.getString("PackageDimension"),
-                rs.getString("Notes"),
-                rs.getString("Status")
-            )
-        ).toArray(Packing[]::new);
+    @GetMapping("/get-by-order-line/{orderLineItemID}")
+    public ResponseEntity<?> getByOrderLineItemID(@PathVariable Integer orderLineItemID) {
+        try {
+            return ResponseEntity.ok(packingService.getByOrderID(orderLineItemID));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to fetch packing records: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/get-by-id/{packingID}")
+    public ResponseEntity<?> getByID(@PathVariable Integer packingID) {
+        try {
+            return ResponseEntity.ok(packingService.getByID(packingID));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to fetch packing record: " + e.getMessage());
+        }
     }
 
     @PostMapping("/create")
-    public ResponseEntity<Packing> createPacking(@RequestBody PackingRequest request) {
-        String sql = """
-            INSERT INTO Packing (
-                OrderID, PackedBy, PackingDate, PackageNumber,
-                PackageWeight, PackageDimension, Notes, Status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """;
+    public ResponseEntity<?> createPacking(@RequestBody PackingCreateRequest request) {
+        try {
+            return ResponseEntity.ok(packingService.createPacking(request));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to create packing: " + e.getMessage());
+        }
+    }
 
-        jdbcTemplate.update(sql,
-            request.orderID(),
-            request.packedBy(),
-            request.packingDate(),
-            request.packageNumber(),
-            request.packageWeight(),
-            request.packageDimension(),
-            request.notes(),
-            request.status()
-        );
+    @PatchMapping("/update/{packingID}")
+    public ResponseEntity<?> updatePacking(@PathVariable Integer packingID, @RequestBody PackingUpdateRequest request) {
+        try {
+            return ResponseEntity.ok(packingService.updatePacking(packingID, request));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to update packing: " + e.getMessage());
+        }
+    }
 
-        Integer id = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Integer.class);
+    @GetMapping("/details/{packingID}")
+    public ResponseEntity<?> getDetailsByPackingID(@PathVariable Integer packingID) {
+        try {
+            return ResponseEntity.ok(packingService.getDetailsByPackingID(packingID));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to fetch packing details: " + e.getMessage());
+        }
+    }
 
-        Packing packing = new Packing(
-            id,
-            request.orderID(),
-            request.packedBy(),
-            request.packingDate(),
-            request.packageNumber(),
-            request.packageWeight(),
-            request.packageDimension(),
-            request.notes(),
-            request.status()
-        );
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(packing);
+    @PostMapping("/details/create")
+    public ResponseEntity<?> addPackingDetail(@RequestBody PackingDetailCreateRequest request) {
+        try {
+            return ResponseEntity.ok(packingService.addPackingDetail(request));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to add packing detail: " + e.getMessage());
+        }
     }
 }

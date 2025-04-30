@@ -3,6 +3,8 @@ package com.lvnam0801.Luna.Resource.Core.SKUItem.Controller;
 import com.lvnam0801.Luna.Resource.Core.SKUItem.Representation.SKUItem;
 import com.lvnam0801.Luna.Resource.Core.SKUItem.Service.SKUItemService;
 
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +23,19 @@ public class SKUItemController {
     public ResponseEntity<SKUItem[]> getAllSKUItems() {
         SKUItem[] items = skuItemService.getAllSKUItems();
         return ResponseEntity.ok(items);
+    }
+    @GetMapping("/get-by-id/{itemID}")
+    public ResponseEntity<?> getSKUItemByID(@PathVariable Integer itemID) {
+        try {
+            SKUItem skuItem = skuItemService.getSKUItemByID(itemID);
+            return ResponseEntity.ok(skuItem);
+        } catch (EmptyResultDataAccessException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("SKU Item not found with ID: " + itemID);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to fetch SKU item: " + e.getMessage());
+        }
     }
 
     // @PostMapping("/create")

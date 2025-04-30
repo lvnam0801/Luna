@@ -3,6 +3,8 @@ package com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Controller;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Representation.ImportReceiptLineItem;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Representation.ImportReceiptLineItemCreateRequest;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Representation.ImportReceiptLineItemCreateResponse;
+import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Representation.ImportReceiptLineItemUpdateRequest;
+import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Representation.ImportReceiptLineItemUpdateResponse;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Service.ImportReceiptLineItemService;
 
 import org.springframework.dao.DataAccessException;
@@ -61,8 +63,8 @@ public class ImportReceiptLineItemController {
     @PostMapping("/create")
     public ResponseEntity<?> createLine(@RequestBody ImportReceiptLineItemCreateRequest request) {
         try {
-            if (request.receiptID() == null || request.productID() == null || request.createdBy() == null) {
-                return ResponseEntity.badRequest().body("Missing required fields: receiptID, itemID, or createdBy.");
+            if (request.receiptID() == null || request.productID() == null) {
+                return ResponseEntity.badRequest().body("Missing required fields: receiptID or itemID");
             }
             ImportReceiptLineItemCreateResponse response = importReceiptLineItemService.createLine(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -75,6 +77,22 @@ public class ImportReceiptLineItemController {
             return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("Unexpected error occurred while creating the line item: " + e.getMessage());
+        }
+    }
+
+    @PatchMapping("/update/{receiptLineItemID}")
+    public ResponseEntity<?> updateReceiptLineItem(
+        @PathVariable Integer receiptLineItemID,
+        @RequestBody ImportReceiptLineItemUpdateRequest request
+    ) {
+        try {
+            ImportReceiptLineItemUpdateResponse response = importReceiptLineItemService.updateReceiptLineItemPartially(receiptLineItemID, request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body("Validation error: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Failed to update receipt line item: " + e.getMessage());
         }
     }
 }

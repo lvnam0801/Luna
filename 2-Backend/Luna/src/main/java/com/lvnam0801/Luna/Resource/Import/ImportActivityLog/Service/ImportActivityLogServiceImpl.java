@@ -57,7 +57,7 @@ public class ImportActivityLogServiceImpl implements ImportActivityLogService {
                 rs.getString("TargetType"),
                 rs.getString("ActionType"),
                 rs.getInt("TargetID"),
-                rs.getTimestamp("LoggedTime").toLocalDateTime(),
+                rs.getTimestamp("LoggedTime"),
                 rs.getString("Content"),
                 rs.getString("Status")
             )
