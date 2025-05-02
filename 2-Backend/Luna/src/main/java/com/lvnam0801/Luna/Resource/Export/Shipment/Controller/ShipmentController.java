@@ -1,70 +1,98 @@
 package com.lvnam0801.Luna.Resource.Export.Shipment.Controller;
 
-import com.lvnam0801.Luna.Resource.Export.Shipment.Representation.Shipment;
-import com.lvnam0801.Luna.Resource.Export.Shipment.Representation.ShipmentRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
+
+import com.lvnam0801.Luna.Resource.Export.Packing.Representation.Packing;
+import com.lvnam0801.Luna.Resource.Export.Shipment.Representation.Shipment;
+import com.lvnam0801.Luna.Resource.Export.Shipment.Representation.ShipmentCreateRequest;
+import com.lvnam0801.Luna.Resource.Export.Shipment.Representation.ShipmentCreateResponse;
+import com.lvnam0801.Luna.Resource.Export.Shipment.Representation.ShipmentPacking;
+import com.lvnam0801.Luna.Resource.Export.Shipment.Representation.ShipmentPackingCreateRequest;
+import com.lvnam0801.Luna.Resource.Export.Shipment.Representation.ShipmentPackingCreateResponse;
+import com.lvnam0801.Luna.Resource.Export.Shipment.Representation.ShipmentUpdateRequest;
+import com.lvnam0801.Luna.Resource.Export.Shipment.Representation.ShipmentUpdateResponse;
+import com.lvnam0801.Luna.Resource.Export.Shipment.Service.ShipmentService;
 
 @RestController
 @RequestMapping("/api/shipment")
 public class ShipmentController {
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private final ShipmentService shipmentService;
+
+    public ShipmentController(ShipmentService shipmentService) {
+        this.shipmentService = shipmentService;
+    }
 
     @GetMapping("/get-by-order/{orderID}")
-    public Shipment[] getByOrder(@PathVariable Integer orderID) {
-        String sql = "SELECT * FROM Shipment WHERE OrderID = ?";
+    public ResponseEntity<?> getByOrderID(@PathVariable Integer orderID) {
+        try {
+            Shipment[] shipments = shipmentService.getByOrderID(orderID);
+            return ResponseEntity.ok(shipments);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to get shipments: " + e.getMessage());
+        }
+    }
 
-        return jdbcTemplate.query(
-            sql,
-            new Object[]{orderID},
-            (rs, rowNum) -> new Shipment(
-                rs.getInt("ShipmentID"),
-                rs.getInt("OrderID"),
-                rs.getInt("CarrierID"),
-                rs.getObject("ShippedBy", Integer.class),
-                rs.getDate("ShipmentDate"),
-                rs.getString("TrackingNumber"),
-                rs.getLong("ShippingCost"),
-                rs.getString("Status")
-            )
-        ).toArray(Shipment[]::new);
+    @GetMapping("/get-by-id/{shipmentID}")
+    public ResponseEntity<?> getByID(@PathVariable Integer shipmentID) {
+        try {
+            Shipment shipment = shipmentService.getByID(shipmentID);
+            return ResponseEntity.ok(shipment);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to get shipment: " + e.getMessage());
+        }
     }
 
     @PostMapping("/create")
-    public ResponseEntity<Shipment> createShipment(@RequestBody ShipmentRequest request) {
-        String sql = """
-            INSERT INTO Shipment (OrderID, CarrierID, ShippedBy, ShipmentDate, TrackingNumber, ShippingCost, Status)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """;
+    public ResponseEntity<?> create(@RequestBody ShipmentCreateRequest request) {
+        try {
+            ShipmentCreateResponse response = shipmentService.createShipment(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Validation error: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to create shipment: " + e.getMessage());
+        }
+    }
 
-        jdbcTemplate.update(sql,
-            request.orderID(),
-            request.carrierID(),
-            request.shippedBy(),
-            request.shipmentDate(),
-            request.trackingNumber(),
-            request.shippingCost(),
-            request.status()
-        );
+    @PatchMapping("/update/{shipmentID}")
+    public ResponseEntity<?> updatePartially(@PathVariable Integer shipmentID,
+                                             @RequestBody ShipmentUpdateRequest request) {
+        try {
+            ShipmentUpdateResponse response = shipmentService.updateShipmentPartially(shipmentID, request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Validation error: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to update shipment: " + e.getMessage());
+        }
+    }
 
-        Integer id = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Integer.class);
+    @PostMapping("/create-shipment-packing")
+    public ResponseEntity<?> linkPackingToShipment(@RequestBody ShipmentPackingCreateRequest request) {
+        try {
+            ShipmentPackingCreateResponse response = shipmentService.createShipmentPacking(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to link packing to shipment: " + e.getMessage());
+        }
+    }
 
-        Shipment shipment = new Shipment(
-            id,
-            request.orderID(),
-            request.carrierID(),
-            request.shippedBy(),
-            request.shipmentDate(),
-            request.trackingNumber(),
-            request.shippingCost(),
-            request.status()
-        );
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(shipment);
+    @GetMapping("/get-shipment-packing-by-shipmentID/{shipmentID}")
+    public ResponseEntity<?> getPackingsByShipment(@PathVariable Integer shipmentID) {
+        try {
+            ShipmentPacking[] packings = shipmentService.getShipmentPackingsByShipmentID(shipmentID);
+            return ResponseEntity.ok(packings);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to fetch packings: " + e.getMessage());
+        }
     }
 }

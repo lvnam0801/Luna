@@ -5,6 +5,7 @@ import com.lvnam0801.Luna.Resource.Core.ProductDimension.Representation.ProductD
 
 public record Product(
     Integer productID,
+    String productCode,
     String name,
     String photoURL,
     String origin,

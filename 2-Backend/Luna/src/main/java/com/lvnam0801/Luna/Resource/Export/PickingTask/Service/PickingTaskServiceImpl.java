@@ -1,9 +1,10 @@
 package com.lvnam0801.Luna.Resource.Export.PickingTask.Service;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.lvnam0801.Luna.Resource.Core.SKUItem.Service.SKUItemService;
 import com.lvnam0801.Luna.Resource.Core.User.Context.UserContext;
 import com.lvnam0801.Luna.Resource.Export.ExportActivityLog.Representation.ExportActivityActionType;
 import com.lvnam0801.Luna.Resource.Export.ExportActivityLog.Representation.ExportActivityLogRequest;
@@ -15,22 +16,25 @@ import com.lvnam0801.Luna.Resource.Export.PickingTask.Representation.PickingTask
 import com.lvnam0801.Luna.Resource.Export.PickingTask.Representation.PickingTaskUpdateRequest;
 import com.lvnam0801.Luna.Resource.Export.PickingTask.Representation.PickingTaskUpdateResponse;
 
-import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class PickingTaskServiceImpl implements PickingTaskService {
 
-    private JdbcTemplate jdbcTemplate;
-    private UserContext userContext;
-    private ExportActivityLogService activityLogService;
+    private final JdbcTemplate jdbcTemplate;
+    private final SKUItemService skuItemService;
+    private final UserContext userContext;
+    private final ExportActivityLogService activityLogService;
 
     public PickingTaskServiceImpl(
             JdbcTemplate jdbcTemplate,
+            SKUItemService skuItemService,
             UserContext userContext,
             ExportActivityLogService activityLogService
     ) {
         this.jdbcTemplate = jdbcTemplate;
+        this.skuItemService = skuItemService;
         this.userContext = userContext;
         this.activityLogService = activityLogService;
     }
@@ -118,54 +122,81 @@ public class PickingTaskServiceImpl implements PickingTaskService {
     }
 
     @Override
+    @Transactional
     public PickingTaskCreateResponse createPickingTask(PickingTaskCreateRequest request) {
         Integer userID = userContext.getCurrentUserID();
 
+        // Step 1: Reserve quantity in SKUItem
+        skuItemService.reserveQuantity(
+            request.skuItemID(),
+            request.pickedQuantity()
+        );
+
+        // Step 2: Insert picking task
         String sql = """
-            INSERT INTO PickingTask (PickingNumber, OrderLineItemID, SKUItemID, PickedQuantity, PickFromLocationID,
-                                     Status, PickedBy, PickedDate, CreatedBy, UpdatedBy)
+            INSERT INTO PickingTask (
+                PickingNumber, OrderLineItemID, SKUItemID,
+                PickedQuantity, PickFromLocationID,
+                Status, PickedBy, PickedDate,
+                CreatedBy, UpdatedBy
+            )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
-        jdbcTemplate.update(sql,
-                request.pickingNumber(),
-                request.orderLineItemID(),
-                request.skuItemID(),
-                request.pickedQuantity(),
-                request.pickFromLocationID(),
-                request.status(),
-                userID,
-                request.pickedDate(),
-                userID,
-                userID
+        jdbcTemplate.update(
+            sql,
+            request.pickingNumber(),
+            request.orderLineItemID(),
+            request.skuItemID(),
+            request.pickedQuantity(),
+            request.pickFromLocationID(),
+            request.status(),
+            userID,
+            request.pickedDate(),
+            userID,
+            userID
         );
 
+        // Step 3: Get new ID
         Integer id = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Integer.class);
-        if (id == null) throw new IllegalStateException("Could not retrieve new PickingTask ID");
+        if (id == null)
+            throw new IllegalStateException("Could not retrieve new PickingTask ID");
 
+        // Step 4: Log activity
         activityLogService.log(new ExportActivityLogRequest(
-                getOrderIDFromPickingTaskID(id),
-                userID,
-                ExportActivityTargetType.PICKING_TASK.value(),
-                ExportActivityActionType.CREATE.value(),
-                id,
-                "Tạo picking task cho dòng xuất kho " + request.pickingNumber()
+            getOrderIDFromPickingTaskID(id),
+            userID,
+            ExportActivityTargetType.PICKING_TASK.value(),
+            ExportActivityActionType.CREATE.value(),
+            id,
+            "Tạo picking task cho dòng xuất kho " + request.pickingNumber()
         ));
 
         return new PickingTaskCreateResponse(id, "Picking Task created successfully.");
     }
 
-    @Override
+   @Override
+    @Transactional
     public PickingTaskUpdateResponse updatePickingTaskPartially(Integer pickingTaskID, PickingTaskUpdateRequest request) {
         Integer userID = userContext.getCurrentUserID();
 
-        List<String> updates = new java.util.ArrayList<>();
-        List<Object> params = new java.util.ArrayList<>();
-
-        if (request.pickedQuantity() != null) {
-            updates.add("PickedQuantity = ?");
-            params.add(request.pickedQuantity());
+        // Step 1: Fetch the original PickingTask first
+        PickingTask originalTask = getByPickingTaskID(pickingTaskID);
+        if (originalTask == null) {
+            throw new IllegalArgumentException("PickingTask not found with ID: " + pickingTaskID);
         }
+
+        // Step 2: If status is changing to 'cancelled', release reserved quantity
+        if ("cancelled".equalsIgnoreCase(request.status())
+            && !"cancelled".equalsIgnoreCase(originalTask.status())) {
+            // Step 2.1: Log the rollback
+            rollbackSKUQuantityOnCancel(pickingTaskID, originalTask, userID);
+        }
+
+        // Step 3: Build SQL for partial update
+        List<String> updates = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
+
         if (request.pickFromLocationID() != null) {
             updates.add("PickFromLocationID = ?");
             params.add(request.pickFromLocationID());
@@ -179,28 +210,28 @@ public class PickingTaskServiceImpl implements PickingTaskService {
             params.add(request.pickedDate());
         }
 
-        if (updates.isEmpty()) throw new IllegalArgumentException("No valid fields provided to update.");
-
         updates.add("UpdatedBy = ?");
+        updates.add("UpdatedAt = CURRENT_TIMESTAMP");
         params.add(userID);
-
-        String sql = "UPDATE PickingTask SET " + String.join(", ", updates) +
-                ", UpdatedAt = CURRENT_TIMESTAMP WHERE PickingTaskID = ?";
         params.add(pickingTaskID);
 
+        String sql = "UPDATE PickingTask SET " + String.join(", ", updates) + " WHERE PickingTaskID = ?";
+
         int rows = jdbcTemplate.update(sql, params.toArray());
-        if (rows == 0) throw new IllegalStateException("Update failed. No rows affected.");
+        if (rows == 0) throw new IllegalStateException("Update failed");
 
         String pickingNumber = getPickingNumberByID(pickingTaskID);
-        if (pickingNumber == null) throw new IllegalStateException("Could not retrieve PickingNumber");
-
+        if (pickingNumber == null) {
+            throw new IllegalStateException("Could not retrieve PickingNumber for ID: " + pickingTaskID);
+        }
+        // Step 4: Log activity
         activityLogService.log(new ExportActivityLogRequest(
-                getOrderIDFromPickingTaskID(pickingTaskID),
-                userID,
-                ExportActivityTargetType.PICKING_TASK.value(),
-                ExportActivityActionType.UPDATE.value(),
-                pickingTaskID,
-                "Cập nhật picking task " + pickingNumber
+            getOrderIDFromPickingTaskID(pickingTaskID),
+            userID,
+            ExportActivityTargetType.PICKING_TASK.value(),
+            ExportActivityActionType.UPDATE.value(),
+            pickingTaskID,
+            "Cập nhật picking task " + pickingNumber
         ));
 
         return new PickingTaskUpdateResponse(pickingTaskID, "Picking Task updated successfully.");
@@ -218,5 +249,23 @@ public class PickingTaskServiceImpl implements PickingTaskService {
     private String getPickingNumberByID(Integer taskID) {
         return jdbcTemplate.queryForObject("SELECT PickingNumber FROM PickingTask WHERE PickingTaskID = ?",
                 new Object[]{taskID}, String.class);
+    }
+
+    private void rollbackSKUQuantityOnCancel(Integer pickingTaskID, PickingTask originalTask, Integer userID) {
+        // Step 1: Restore quantity
+        skuItemService.increaseSKUItemQuantity(
+            originalTask.skuItemID(),
+            originalTask.pickedQuantity()
+        );
+    
+        // Step 2: Log the rollback
+        activityLogService.log(new ExportActivityLogRequest(
+            getOrderIDFromPickingTaskID(pickingTaskID),
+            userID,
+            ExportActivityTargetType.SKU_ITEM.value(),
+            ExportActivityActionType.UPDATE.value(),
+            originalTask.skuItemID(),
+            "Khôi phục số lượng SKU vì huỷ picking task: " + pickingTaskID
+        ));
     }
 }

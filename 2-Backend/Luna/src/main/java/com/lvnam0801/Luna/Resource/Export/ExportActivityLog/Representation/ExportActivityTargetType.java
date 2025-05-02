@@ -5,7 +5,8 @@ public enum ExportActivityTargetType {
     LINE_ITEM("LineItem"),
     PICKING_TASK("PickingTask"),
     PACKING("Packing"),
-    SHIPMENT("Shipment");
+    SHIPMENT("Shipment"),
+    SKU_ITEM("SKUItem"),;
 
     private final String value;
 

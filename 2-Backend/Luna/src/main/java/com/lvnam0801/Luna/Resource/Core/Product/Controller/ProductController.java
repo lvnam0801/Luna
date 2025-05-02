@@ -35,7 +35,7 @@ public class ProductController {
     public List<Product> getProducts() {
         // SQL Query to fetch products along with their dimensions
         String sql = """
-            SELECT p.ProductID, p.Name, p.PhotoURL, p.Origin, p.WholesalePrice, p.RetailPrice, p.Status, 
+            SELECT p.ProductID, p.ProductCode, p.Name, p.PhotoURL, p.Origin, p.WholesalePrice, p.RetailPrice, p.Status, 
                 m.Name AS Manufacturer, c.Name AS Category, 
                 d.DimensionType, d.Value, d.Unit
             FROM Product p
@@ -54,6 +54,7 @@ public class ProductController {
             // If product is not already in the map, create a new one
             productMap.putIfAbsent(productID, new Product(
                 productID,
+                (String) row.get("ProductCode"),
                 (String) row.get("Name"),
                 (String) row.get("PhotoURL"),
                 (String) row.get("Origin"),
@@ -84,7 +85,7 @@ public class ProductController {
         // SQL query to fetch a specific product by ID along with its dimensions
         String sql = """
             SELECT 
-                p.ProductID, p.Name, p.PhotoURL, p.Origin, p.WholesalePrice, p.RetailPrice, p.Status,
+                p.ProductID, p.ProductCode, p.Name, p.PhotoURL, p.Origin, p.WholesalePrice, p.RetailPrice, p.Status,
                 m.Name AS Manufacturer, c.Name AS Category,
                 d.DimensionType, d.Value, d.Unit
             FROM Product p
@@ -107,6 +108,7 @@ public class ProductController {
                 // First time: create the Product
                 product = new Product(
                     (Integer) row.get("ProductID"),
+                    (String) row.get("ProductCode"),
                     (String) row.get("Name"),
                     (String) row.get("PhotoURL"),
                     (String) row.get("Origin"),
@@ -137,12 +139,13 @@ public class ProductController {
     public ResponseEntity<ProductCreateResponse> createProduct(@RequestBody ProductCreateRequest productRequest) {
         // SQL to insert a new Product
         String productSql = """
-            INSERT INTO Product (Name, PhotoURL, Origin, WholesalePrice, RetailPrice, Status, ManufacturerID, CategoryID)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO Product (ProductCode, Name, PhotoURL, Origin, WholesalePrice, RetailPrice, Status, ManufacturerID, CategoryID)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         // Insert the Product
-        jdbcTemplate.update(productSql, 
+        jdbcTemplate.update(productSql,
+            productRequest.getProductCode(), 
             productRequest.getName(),
             productRequest.getPhotoURL(),
             productRequest.getOrigin(),

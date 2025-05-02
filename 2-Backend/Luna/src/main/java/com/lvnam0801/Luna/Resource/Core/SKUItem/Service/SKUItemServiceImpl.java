@@ -2,8 +2,10 @@ package com.lvnam0801.Luna.Resource.Core.SKUItem.Service;
 
 import java.util.List;
 
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.lvnam0801.Luna.Resource.Core.SKUItem.Representation.SKUItem;
 import com.lvnam0801.Luna.Resource.Core.SKUItem.Representation.SKUItemCreateRequest;
@@ -171,5 +173,72 @@ public class SKUItemServiceImpl implements SKUItemService {
         );
         // Step 3: Return the created SKUItem
         return item;
+    }
+
+    @Override
+    public void decreaseSKUItemQuantity(Integer skuItemID, Integer quantityToDecrease) {
+        // Validate enough quantity exists
+        Integer currentQty = jdbcTemplate.queryForObject(
+            "SELECT Quantity FROM SKUItem WHERE SKUItemID = ? FOR UPDATE",
+            Integer.class,
+            skuItemID
+        );
+
+        if (currentQty == null) {
+            throw new IllegalArgumentException("SKUItem not found with ID: " + skuItemID);
+        }
+
+        if (currentQty < quantityToDecrease) {
+            throw new IllegalArgumentException("Insufficient quantity in stock. Current: " + currentQty);
+        }
+
+        jdbcTemplate.update(
+            "UPDATE SKUItem SET Quantity = Quantity - ? WHERE ItemID = ?",
+            quantityToDecrease,
+            skuItemID
+        );
+    }
+
+    @Override
+    public void increaseSKUItemQuantity(Integer skuItemID, Integer quantityToRestore) {
+        jdbcTemplate.update(
+            "UPDATE SKUItem SET Quantity = Quantity + ? WHERE ItemID = ?",
+            quantityToRestore,
+            skuItemID
+        );
+    }
+
+    @Override
+    public void updateSKUItemStatus(Integer skuItemID, String newStatus) {
+        jdbcTemplate.update(
+            "UPDATE SKUItem SET Status = ? WHERE ItemID = ?",
+            newStatus,
+            skuItemID
+        );
+    }
+
+    @Override
+    @Transactional
+    public void reserveQuantity(Integer skuItemID, int quantityToReserve) {
+        // Step 1: Check available quantity
+        String checkSql = "SELECT Quantity FROM SKUItem WHERE ItemID = ? FOR UPDATE";
+        Integer currentQuantity = jdbcTemplate.queryForObject(checkSql, Integer.class, skuItemID);
+
+        if (currentQuantity == null) {
+            throw new IllegalArgumentException("SKU Item not found with ID: " + skuItemID);
+        }
+
+        if (currentQuantity < quantityToReserve) {
+            throw new IllegalStateException("Not enough SKUItem quantity available. Current: " 
+                + currentQuantity + ", Required: " + quantityToReserve);
+        }
+
+        // Step 2: Decrease quantity
+        String updateSql = "UPDATE SKUItem SET Quantity = Quantity - ? WHERE ItemID = ?";
+        int rowsAffected = jdbcTemplate.update(updateSql, quantityToReserve, skuItemID);
+
+        if (rowsAffected != 1) {
+            throw new DataAccessException("Failed to reserve quantity for SKUItemID: " + skuItemID) {};
+        }
     }
 }

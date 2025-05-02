@@ -9,6 +9,7 @@ import com.lvnam0801.Luna.Resource.Core.ProductDimension.Representation.ProductD
 @Setter
 public class ProductCreateRequest {
     private String name;
+    private String productCode;
     private String photoURL;
     private String origin;
     private int wholesalePrice;

@@ -2,6 +2,7 @@ package com.lvnam0801.Luna.Resource.Export.Packing.Representation;
 
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.util.List;
 
 public record Packing(
     Integer packingID,
@@ -18,5 +19,6 @@ public record Packing(
     Timestamp createdAt,
     Integer updatedBy,
     String updatedByName,
-    Timestamp updatedAt
+    Timestamp updatedAt,
+    List<PackingDetail> skuItems
 ) {}

@@ -1,6 +1,9 @@
 package com.lvnam0801.Luna.Resource.Export.Packing.Service;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -35,20 +38,38 @@ public class PackingServiceImpl implements PackingService {
     @Override
     public Packing[] getByOrderID(Integer orderID) {
         String sql = """
-            SELECT p.*, l.LocationName AS PackToLocationName,
-                   u1.FullName AS CreatedByName,
-                   u2.FullName AS UpdatedByName,
-                   u3.FullName AS PackedByName
+            SELECT 
+                p.*, 
+                l.LocationName AS PackToLocationName,
+                u1.FullName AS CreatedByName,
+                u2.FullName AS UpdatedByName,
+                u3.FullName AS PackedByName,
+                pd.PackingDetailID,
+                pd.SKUItemID,
+                s.SKU,
+                pr.Name AS ProductName,
+                pd.PackedQuantity
             FROM Packing p
             JOIN Location l ON p.PackToLocationID = l.LocationID
             LEFT JOIN User u1 ON p.CreatedBy = u1.UserID
             LEFT JOIN User u2 ON p.UpdatedBy = u2.UserID
             LEFT JOIN User u3 ON p.PackedBy = u3.UserID
+            LEFT JOIN PackingDetail pd ON p.PackingID = pd.PackingID
+            LEFT JOIN SKUItem s ON pd.SKUItemID = s.ItemID
+            LEFT JOIN Product pr ON s.ProductID = pr.ProductID
             WHERE p.OrderID = ?
+            ORDER BY p.PackingID
         """;
 
-        return jdbcTemplate.query(sql, new Object[]{orderID}, (rs, rowNum) -> new Packing(
-                rs.getInt("PackingID"),
+        List<Packing> result = new ArrayList<>();
+        Map<Integer, Packing> packingMap = new LinkedHashMap<>();
+
+        jdbcTemplate.query(sql, new Object[]{orderID}, rs -> {
+            Integer packingID = rs.getInt("PackingID");
+
+            // Only create Packing object if not already present
+            packingMap.putIfAbsent(packingID, new Packing(
+                packingID,
                 rs.getString("PackingNumber"),
                 rs.getInt("OrderID"),
                 rs.getInt("PackToLocationID"),
@@ -62,8 +83,25 @@ public class PackingServiceImpl implements PackingService {
                 rs.getTimestamp("CreatedAt"),
                 rs.getInt("UpdatedBy"),
                 rs.getString("UpdatedByName"),
-                rs.getTimestamp("UpdatedAt")
-        )).toArray(Packing[]::new);
+                rs.getTimestamp("UpdatedAt"),
+                new ArrayList<>() // Empty list of skuItems
+            ));
+
+            // Add packing detail if exists
+            if (rs.getObject("PackingDetailID") != null) {
+                Packing packing = packingMap.get(packingID);
+                packing.skuItems().add(new PackingDetail(
+                    rs.getInt("PackingDetailID"),
+                    packingID,
+                    rs.getInt("SKUItemID"),
+                    rs.getString("SKU"),
+                    rs.getString("ProductName"),
+                    rs.getInt("PackedQuantity")
+                ));
+            }
+        });
+
+        return packingMap.values().toArray(new Packing[0]);
     }
 
     @Override
@@ -84,6 +122,32 @@ public class PackingServiceImpl implements PackingService {
             LEFT JOIN User u3 ON p.PackedBy = u3.UserID
             WHERE p.PackingID = ?
         """;
+        String detailSql = """
+            SELECT 
+                d.PackingDetailID,
+                d.PackingID,
+                d.SKUItemID,
+                s.SKU,
+                p.Name AS ProductName,
+                d.PackedQuantity
+            FROM PackingDetail d
+            JOIN SKUItem s ON d.SKUItemID = s.ItemID
+            JOIN Product p ON s.ProductID = p.ProductID
+            WHERE d.PackingID = ?
+        """;
+
+        List<PackingDetail> skuItems = jdbcTemplate.query(
+            detailSql,
+            new Object[]{packingID},
+            (rs, rowNum) -> new PackingDetail(
+                rs.getInt("PackingDetailID"),
+                rs.getInt("PackingID"),
+                rs.getInt("SKUItemID"),
+                rs.getString("SKU"),
+                rs.getString("ProductName"),
+                rs.getInt("PackedQuantity")
+            )
+        );
 
         return jdbcTemplate.queryForObject(sql, new Object[]{packingID}, (rs, rowNum) -> new Packing(
                 rs.getInt("PackingID"),
@@ -100,7 +164,8 @@ public class PackingServiceImpl implements PackingService {
                 rs.getTimestamp("CreatedAt"),
                 rs.getInt("UpdatedBy"),
                 rs.getString("UpdatedByName"),
-                rs.getTimestamp("UpdatedAt")
+                rs.getTimestamp("UpdatedAt"),
+                skuItems
         ));
     }
 

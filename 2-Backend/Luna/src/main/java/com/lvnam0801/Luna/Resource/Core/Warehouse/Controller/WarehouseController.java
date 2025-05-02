@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
+
 @RestController
 @RequestMapping("/api/warehouse")
 public class WarehouseController {
@@ -37,6 +38,33 @@ public class WarehouseController {
 
         return warehouses;
     }
+
+    @GetMapping("/location/{locationID}")
+    public ResponseEntity<Warehouse> getWarehouseByLocationID(@PathVariable String locationID) {
+        String sql = "SELECT w.* FROM Warehouse w JOIN Location l ON w.WarehouseID = l.WarehouseID WHERE l.LocationID = ?";
+        Warehouse warehouse = jdbcTemplate.queryForObject(
+            sql,
+            new Object[]{locationID},
+            (rs, rowNum) -> new Warehouse(
+                rs.getInt("WarehouseID"),
+                rs.getString("Name"),
+                rs.getString("Phone"),
+                rs.getString("Email"),
+                rs.getString("StreetAddress"),
+                rs.getString("City"),
+                rs.getString("StateProvince"),
+                rs.getString("PostalCode"),
+                rs.getString("Country"),
+                rs.getString("Status")
+            )
+        );
+        if (warehouse != null) {
+            return ResponseEntity.ok(warehouse);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+    
 
     @PostMapping("/create")
     public ResponseEntity<Warehouse> createWarehouse(@RequestBody WarehouseRequest request) {
