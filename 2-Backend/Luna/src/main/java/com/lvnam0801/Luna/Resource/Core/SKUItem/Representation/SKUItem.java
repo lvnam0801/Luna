@@ -5,6 +5,7 @@ import java.sql.Date;
 public record SKUItem(
     // SKIItem table
     Integer itemID, 
+    Integer productID,
     String SKU, 
     Integer quantity, 
     String status,

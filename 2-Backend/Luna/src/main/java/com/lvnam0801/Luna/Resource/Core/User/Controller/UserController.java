@@ -70,4 +70,9 @@ public class UserController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(user);
     }
+
+    @GetMapping("/profile")
+    public ResponseEntity<String> getProfile() {
+        return ResponseEntity.ok("You are authenticated!");
+    }
 }

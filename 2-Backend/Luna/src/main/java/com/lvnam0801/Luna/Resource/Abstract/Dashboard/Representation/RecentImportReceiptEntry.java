@@ -5,6 +5,7 @@ import java.time.LocalDate;
 
 public record RecentImportReceiptEntry(
     Integer receiptID,
+    String receiptNumber,
     String providerName,
     BigDecimal totalPrice,
     String status,

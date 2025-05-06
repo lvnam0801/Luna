@@ -58,6 +58,24 @@ public class PutawayController {
         }
     }
 
+    @GetMapping("/get-by-sku-item/{skuItemID}")
+    public ResponseEntity<?> getPutawayBySkuItem(@PathVariable Integer skuItemID) {
+        try {
+            if (skuItemID == null) {
+                return ResponseEntity.badRequest().body("Missing required field: skuItemID");
+            }
+    
+            Putaway putaway = putawayService.getBySKUItem(skuItemID);
+            return ResponseEntity.ok(putaway);
+        } catch (DataAccessException dae) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Database error while retrieving putaways: " + dae.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Unexpected error occurred: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/create")
     public ResponseEntity<?> createPutaway(@RequestBody PutawayCreateRequest request) {
         try {

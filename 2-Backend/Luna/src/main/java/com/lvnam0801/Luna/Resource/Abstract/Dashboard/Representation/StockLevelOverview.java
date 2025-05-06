@@ -4,5 +4,6 @@ import java.util.List;
 
 public record StockLevelOverview(
     int totalProductTypes,
+    int totalSKUItemQuantity,
     List<ProductStockByName> productStockByNames
 ) {}

@@ -1,0 +1,15 @@
+CREATE TABLE RolePermission (
+    ID INT AUTO_INCREMENT PRIMARY KEY,
+    RoleID INT NOT NULL,
+    PermissionID INT NOT NULL,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT FK_RolePermission_Role FOREIGN KEY (RoleID)
+        REFERENCES Role(RoleID) ON DELETE CASCADE,
+
+    CONSTRAINT FK_RolePermission_Permission FOREIGN KEY (PermissionID)
+        REFERENCES Permission(PermissionID) ON DELETE CASCADE,
+
+    UNIQUE (RoleID, PermissionID)  -- prevent duplicate mappings
+);

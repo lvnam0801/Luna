@@ -27,6 +27,7 @@ public class SKUItemServiceImpl implements SKUItemService {
         String sql = """
             SELECT
                 s.ItemID,
+                s.ProductID,
                 s.SKU,
                 s.Quantity,
                 s.Status,
@@ -61,6 +62,7 @@ public class SKUItemServiceImpl implements SKUItemService {
     
         List<SKUItem> items = jdbcTemplate.query(sql, (rs, rowNum) -> new SKUItem(
             rs.getInt("ItemID"),
+            rs.getInt("ProductID"),
             rs.getString("SKU"),
             rs.getInt("Quantity"),
             rs.getString("Status"),
@@ -87,10 +89,79 @@ public class SKUItemServiceImpl implements SKUItemService {
         return items.toArray(SKUItem[]::new);
     }
     @Override
+    public SKUItem[] getSKUItemsByProductID(Integer productID)
+    {
+        String sql = """
+            SELECT
+                s.ItemID,
+                s.ProductID,
+                s.SKU,
+                s.Quantity,
+                s.Status,
+    
+                p.Name,
+                p.PhotoURL,
+                p.Origin,
+                p.WholesalePrice,
+                p.RetailPrice,
+                p.CategoryID,
+                p.ManufacturerID,
+    
+                c.Name AS CategoryName,
+                m.Name AS ManufacturerName,
+    
+                w.WarehouseID,
+                w.Name AS WarehouseName,
+                l.LocationID,
+                l.LocationName AS LocationName,
+    
+                r.ExpirationDate
+    
+            FROM SKUItem s
+            JOIN Product p ON s.ProductID = p.ProductID
+            LEFT JOIN ProductCategory c ON p.CategoryID = c.CategoryID
+            LEFT JOIN Manufacturer m ON p.ManufacturerID = m.ManufacturerID
+            LEFT JOIN Putaway pu ON pu.SKUItemID = s.ItemID
+            LEFT JOIN Location l ON pu.PutawayAtLocationID = l.LocationID
+            LEFT JOIN Warehouse w ON l.WarehouseID = w.WarehouseID
+            LEFT JOIN ImportReceiptLineItem r ON pu.ReceiptLineItemID = r.ReceiptLineItemID
+            WHERE s.ProductID = ?
+        """;
+    
+        List<SKUItem> items = jdbcTemplate.query(sql, (rs, rowNum) -> new SKUItem(
+            rs.getInt("ItemID"),
+            rs.getInt("ProductID"),
+            rs.getString("SKU"),
+            rs.getInt("Quantity"),
+            rs.getString("Status"),
+    
+            rs.getString("Name"),
+            rs.getString("PhotoURL"),
+            rs.getString("Origin"),
+            rs.getLong("WholesalePrice"),
+            rs.getLong("RetailPrice"),
+    
+            rs.getInt("CategoryID"),
+            rs.getString("CategoryName"),
+            rs.getInt("ManufacturerID"),
+            rs.getString("ManufacturerName"),
+    
+            rs.getInt("WarehouseID"),
+            rs.getString("WarehouseName"),
+            rs.getInt("LocationID"),
+            rs.getString("LocationName"),
+    
+            rs.getDate("ExpirationDate")        
+        ), productID);
+        return items.toArray(SKUItem[]::new);
+    }
+
+    @Override
     public SKUItem getSKUItemByID(Integer itemID) {
         String sql = """
             SELECT
                 s.ItemID,
+                s.ProductID,
                 s.SKU,
                 s.Quantity,
                 s.Status,
@@ -121,6 +192,7 @@ public class SKUItemServiceImpl implements SKUItemService {
 
         return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> new SKUItem(
                 rs.getInt("ItemID"),
+                rs.getInt("ProductID"),
                 rs.getString("SKU"),
                 rs.getInt("Quantity"),
                 rs.getString("Status"),

@@ -1,12 +1,1 @@
--- SELECT * FROM PickingTask;
--- SELECT pt.*, s.SKU, l.LocationName AS PickFromLocationName,
---         u1.FullName AS CreatedByName,
---         u2.FullName AS UpdatedByName,
---         u3.FullName AS PickedByName
--- FROM PickingTask pt
--- JOIN SKUItem s ON pt.SKUItemID = s.ItemID
--- JOIN Location l ON pt.PickFromLocationID = l.LocationID
--- LEFT JOIN User u1 ON pt.CreatedBy = u1.UserID
--- LEFT JOIN User u2 ON pt.UpdatedBy = u2.UserID
--- LEFT JOIN User u3 ON pt.PickedBy = u3.UserID
--- WHERE pt.OrderLineItemID = 1
+SELECT * FROM PickingTask;

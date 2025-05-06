@@ -1,1 +1,1 @@
-SELECT * FROM SKUItem;
+-- SELECT * FROM SKUItem;

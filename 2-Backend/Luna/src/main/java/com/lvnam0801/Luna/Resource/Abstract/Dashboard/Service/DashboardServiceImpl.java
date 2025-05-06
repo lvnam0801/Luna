@@ -73,8 +73,17 @@ public class DashboardServiceImpl implements DashboardService {
             totalProductTypes = 0; // Default to 0 if no products found
         }
 
-        // 3. Return final record
-        return new StockLevelOverview(totalProductTypes, productStockList);
+        // 3. Count total SKUItem quantity
+        String totalSKUItemQuantityQuery = """
+                SELECT SUM(Quantity) FROM SKUItem
+                """;
+        Integer totalSKUItemQuantity = jdbcTemplate.queryForObject(totalSKUItemQuantityQuery, Integer.class);
+        if (totalSKUItemQuantity == null) {
+            totalSKUItemQuantity = 0;
+        }
+
+        // 4. Return final record
+        return new StockLevelOverview(totalProductTypes, totalSKUItemQuantity, productStockList);
     }
 
     @Override
@@ -202,7 +211,7 @@ public class DashboardServiceImpl implements DashboardService {
     public List<RecentExportOrderEntry> fetchRecentExportOrders() {
         String sql = """
             SELECT 
-                eh.OrderID,
+                eh.OrderID, eh.OrderNumber,
                 p.ContactName AS customerName,
                 SUM(eol.ExportedQuantity * eol.UnitPrice) AS totalPrice,
                 eh.OrderStatus AS status,
@@ -220,6 +229,7 @@ public class DashboardServiceImpl implements DashboardService {
             sql,
             (rs, rowNum) -> new RecentExportOrderEntry(
                 rs.getInt("OrderID"),
+                rs.getString("OrderNumber"),
                 rs.getString("customerName"),
                 rs.getBigDecimal("totalPrice"),
                 rs.getString("status"),
@@ -233,6 +243,7 @@ public class DashboardServiceImpl implements DashboardService {
         String sql = """
             SELECT 
                 ih.ReceiptID,
+                ih.ReceiptNumber,
                 p.ContactName AS providerName,
                 SUM(il.ReceivedQuantity * il.UnitCost) AS totalPrice,
                 ih.ReceiptStatus AS status,
@@ -250,6 +261,7 @@ public class DashboardServiceImpl implements DashboardService {
             sql,
             (rs, rowNum) -> new RecentImportReceiptEntry(
                 rs.getInt("ReceiptID"),
+                rs.getString("ReceiptNumber"),
                 rs.getString("providerName"),
                 rs.getBigDecimal("totalPrice"),
                 rs.getString("status"),

@@ -5,6 +5,7 @@ import java.time.LocalDate;
 
 public record RecentExportOrderEntry(
     Integer orderID,
+    String orderNumber,
     String customerName,
     BigDecimal totalPrice,
     String status,

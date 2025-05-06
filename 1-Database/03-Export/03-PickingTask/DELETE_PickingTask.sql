@@ -1,0 +1,2 @@
+DELETE FROM PickingTask;
+ALTER TABLE PickingTask AUTO_INCREMENT = 1;

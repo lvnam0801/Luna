@@ -1,0 +1,1 @@
+UPDATE SKUItem SET Quantity = Quantity + 2 WHERE ItemID = 1;

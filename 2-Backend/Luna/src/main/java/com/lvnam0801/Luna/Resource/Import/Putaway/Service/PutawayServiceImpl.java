@@ -158,6 +158,66 @@ public class PutawayServiceImpl implements PutawayService{
         );
     }
 
+    @Override
+    public Putaway getBySKUItem(Integer skuItemID)
+    {
+        String sql = """
+            SELECT
+                p.PutawayID,
+                p.PutawayNumber,
+                p.ReceiptLineItemID,
+                p.PutawayAtLocationID,
+                loc.LocationName AS PutawayAtLocationName,
+                p.SKUItemID,
+                sku.SKU AS SKUValue,
+                p.Quantity,
+                p.PutawayResult,
+                p.Status,
+                p.PutawayBy,
+                CONCAT(u1.FirstName, ' ', u1.LastName) AS PutawayByName,
+                p.PutawayDate,
+                p.CreatedBy,
+                CONCAT(u2.FirstName, ' ', u2.LastName) AS CreatedByName,
+                p.CreatedAt,
+                p.UpdatedBy,
+                CONCAT(u3.FirstName, ' ', u3.LastName) AS UpdatedByName,
+                p.UpdatedAt
+            FROM Putaway p
+            LEFT JOIN Location loc ON p.PutawayAtLocationID = loc.LocationID
+            LEFT JOIN SKUItem sku ON p.SKUItemID = sku.ItemID
+            LEFT JOIN User u1 ON p.PutawayBy = u1.UserID
+            LEFT JOIN User u2 ON p.CreatedBy = u2.UserID
+            LEFT JOIN User u3 ON p.UpdatedBy = u3.UserID
+            WHERE p.SKUItemID = ?
+            """;
+    
+        return jdbcTemplate.queryForObject(
+            sql,
+            new Object[]{skuItemID},
+            (rs, rowNum) -> new Putaway(
+                rs.getInt("PutawayID"),
+                rs.getString("PutawayNumber"),
+                rs.getInt("ReceiptLineItemID"),
+                rs.getInt("PutawayAtLocationID"),
+                rs.getString("PutawayAtLocationName"),
+                rs.getInt("SKUItemID"),
+                rs.getString("SKUValue"),
+                rs.getInt("Quantity"),
+                rs.getString("PutawayResult"),
+                rs.getString("Status"),
+                rs.getInt("PutawayBy"),
+                rs.getString("PutawayByName"),
+                rs.getDate("PutawayDate"),
+                rs.getInt("CreatedBy"),
+                rs.getString("CreatedByName"),
+                rs.getTimestamp("CreatedAt"),
+                rs.getInt("UpdatedBy"),
+                rs.getString("UpdatedByName"),
+                rs.getTimestamp("UpdatedAt")
+            )
+        );
+    }
+
     // ----------CREATE PUTAWAY----------
     @Override
     public boolean canPutawayByResultType(Integer receiptLineItemID, String putawayResult, Integer putawayQuantity) {

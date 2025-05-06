@@ -3,7 +3,7 @@ CREATE TABLE Packing (
     PackingNumber VARCHAR(100) NOT NULL UNIQUE, -- Unique packing identifier
     OrderID INT NOT NULL,                  -- Link to ExportOrderLineItem
     PackToLocationID INT,                 -- Destination location (e.g., shipping dock)
-    Status ENUM('pending', 'packed', 'cancelled') DEFAULT 'pending',
+    Status ENUM('pending', 'completed', 'cancelled') DEFAULT 'pending',
     PackedBy INT,
     PackedDate DATE,
     CreatedBy INT,

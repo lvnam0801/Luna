@@ -26,6 +26,13 @@ dependencies {
 	implementation("org.projectlombok:lombok:1.18.36")
 	compileOnly("org.projectlombok:lombok:1.18.36")
 	annotationProcessor("org.projectlombok:lombok:1.18.36")
+
+	implementation ("com.google.code.gson:gson:2.10.1")
+	implementation("io.jsonwebtoken:jjwt-api:0.11.5")
+	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
+	runtimeOnly("io.jsonwebtoken:jjwt-gson:0.11.5") // You prefer Gson
+
+	implementation("org.springframework.boot:spring-boot-starter-security")
 }
 
 tasks.withType<Test> {

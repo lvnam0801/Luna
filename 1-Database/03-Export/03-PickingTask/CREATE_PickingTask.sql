@@ -10,7 +10,7 @@ CREATE TABLE PickingTask (
 
     Status ENUM('pending', 'completed', 'cancelled') DEFAULT 'pending',
     PickedBy INT,                       -- FK to User
-    PickedDate DATE NOT NULL,            -- Date of picking action
+    PickedDate DATE NULL,            -- Date of picking action
 
 
     CreatedBy INT,

@@ -9,6 +9,7 @@ import com.lvnam0801.Luna.Resource.Import.Putaway.Representation.PutawayUpdateRe
 public interface PutawayService {
     public Putaway[] getByReceiptLine(Integer receiptLineItemID);
     public Putaway getById(Integer putawayID);
+    public Putaway getBySKUItem(Integer skuItemID);
     
     public boolean canPutawayByResultType(Integer receiptLineItemID, String putawayResult, Integer putawayQuantity);
     public boolean canPutawayQuantityAgainstReceived(Integer receiptLineItemID, Integer putawayQuantity);

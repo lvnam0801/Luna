@@ -24,6 +24,18 @@ public class SKUItemController {
         SKUItem[] items = skuItemService.getAllSKUItems();
         return ResponseEntity.ok(items);
     }
+
+    @GetMapping("/get-by-product/{productID}")
+    public ResponseEntity<?> getSKUItemsByProductID(@PathVariable Integer productID) {
+        try {
+            SKUItem[] skuItems = skuItemService.getSKUItemsByProductID(productID);
+            return ResponseEntity.ok(skuItems);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to fetch SKU items: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/get-by-id/{itemID}")
     public ResponseEntity<?> getSKUItemByID(@PathVariable Integer itemID) {
         try {
@@ -37,11 +49,4 @@ public class SKUItemController {
                     .body("Failed to fetch SKU item: " + e.getMessage());
         }
     }
-
-    // @PostMapping("/create")
-    // public ResponseEntity<Integer> createSKUItem(@RequestBody SKUItemRequest request) 
-    // {
-    //     Integer itemID = skuItemService.createSKUItem(request);
-    //     return ResponseEntity.status(HttpStatus.CREATED).body(itemID);
-    // }
 }

@@ -1,5 +1,4 @@
 -- DROP TABLE IF EXISTS QualityInspection;
-
 CREATE TABLE QualityInspection (
     InspectionID INT AUTO_INCREMENT PRIMARY KEY,                        -- Unique identifier for this inspection
     InspectionNumber VARCHAR(100) NOT NULL UNIQUE,                             -- Unique identifier for the inspection
@@ -11,8 +10,7 @@ CREATE TABLE QualityInspection (
     InspectionResult ENUM('passed', 'failed') NOT NULL,                 -- Result of the inspection
     Notes TEXT,                                                         -- Additional notes from the inspector
 
-    Status ENUM('pending', 'active', 'cancelled', 'archived')          -- Process state of the inspection
-        DEFAULT 'active',                                              -- Controls visibility/editability
+    Status ENUM('active', 'inactive') DEFAULT 'active',                                              -- Controls visibility/editability
     
     CreatedBy INT,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -25,4 +23,3 @@ CREATE TABLE QualityInspection (
     FOREIGN KEY (CreatedBy) REFERENCES User(UserID) ON DELETE SET NULL,
     FOREIGN KEY (UpdatedBy) REFERENCES User(UserID) ON DELETE SET NULL
 );
-

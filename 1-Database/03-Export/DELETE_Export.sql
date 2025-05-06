@@ -1,0 +1,15 @@
+-- DELETE FROM ShipmentPacking;
+-- DELETE FROM Shipment;
+-- DELETE FROM PackingDetail;
+-- DELETE FROM Packing;
+-- DELETE FROM PickingTask;
+-- DELETE FROM ExportOrderLineItem;
+-- DELETE FROM ExportOrderHeader;
+
+-- ALTER TABLE ShipmentPacking AUTO_INCREMENT = 1;
+-- ALTER TABLE Shipment AUTO_INCREMENT = 1;
+-- ALTER TABLE PackingDetail AUTO_INCREMENT = 1;
+-- ALTER TABLE Packing AUTO_INCREMENT = 1;
+-- ALTER TABLE PickingTask AUTO_INCREMENT = 1;
+-- ALTER TABLE ExportOrderLineItem AUTO_INCREMENT = 1;
+-- ALTER TABLE ExportOrderHeader AUTO_INCREMENT = 1;
