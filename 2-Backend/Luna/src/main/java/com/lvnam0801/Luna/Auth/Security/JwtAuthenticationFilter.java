@@ -32,14 +32,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         @NonNull HttpServletResponse response,
         @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
-        System.out.println("🔍 Filtering request path: " + request.getRequestURI());
+        System.out.println("Filtering request path: " + request.getRequestURI());
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             try {
                 String username = jwtUtils.extractUsername(token);
-                System.out.println("✅ Token valid. Username = " + username);
+                // System.out.println("✅ Token valid. Username = " + username);
 
                 // 🟩 Check if already authenticated
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {

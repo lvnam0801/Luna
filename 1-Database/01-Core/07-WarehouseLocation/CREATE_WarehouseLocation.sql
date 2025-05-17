@@ -1,12 +1,12 @@
 CREATE TABLE Location (
     LocationID INT AUTO_INCREMENT PRIMARY KEY,       -- Unique identifier for each location
+    WarehouseID INT NOT NULL,                        -- Foreign key to the Warehouse table
     LocationName VARCHAR(100) NOT NULL,                     -- Identifier or label for the location
     LocationType ENUM('receiving', 'storage', 'quarantine', 'packing', 'shipping', 'return', 'damage') NOT NULL, -- Purpose of the location
     StorageType ENUM('shelf', 'bin', 'zone', 'pallet', 'floor', 'cold_room') NOT NULL, -- Type of storage
     Unit VARCHAR(50) NOT NULL,                       -- Unit of measurement or capacity
     Capacity INT NOT NULL DEFAULT 0; -- Capacity of the location
     Status ENUM('active', 'inactive') DEFAULT 'active', -- Status of the location
-    WarehouseID INT NOT NULL,                        -- Foreign key to the Warehouse table
 
     FOREIGN KEY (WarehouseID) REFERENCES Warehouse(WarehouseID) ON DELETE CASCADE,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

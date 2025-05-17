@@ -13,6 +13,7 @@ public interface PackingService {
 
     // Packing header operations
     public Packing[] getByOrderID(Integer orderID);
+    public Packing[] getByOrderLineItemID(Integer orderLineItemID);
     public Packing getByID(Integer packingID);
     public PackingCreateResponse createPacking(PackingCreateRequest request);
     public PackingUpdateResponse updatePacking(Integer packingID, PackingUpdateRequest request);
@@ -20,4 +21,9 @@ public interface PackingService {
     // Packing detail operations
     public PackingDetail[] getDetailsByPackingID(Integer packingID);
     public PackingDetailCreateResponse addPackingDetail(PackingDetailCreateRequest request);
+
+    // Utils
+    public String generatePackingNumber();
+
+    public Packing[] getAvailablePackingsByOrderID(Integer orderID);
 }

@@ -1,5 +1,8 @@
 package com.lvnam0801.Luna.Resource.Import.ImportReceiptHeader.Service;
 
+import java.time.LocalDate;
+import java.util.List;
+
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptHeader.Representation.ImportReceiptHeader;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptHeader.Representation.ImportReceiptHeaderCreateRequest;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptHeader.Representation.ImportReceiptHeaderCreateResponse;
@@ -12,4 +15,5 @@ public interface ImportReceiptHeaderService
     public ImportReceiptHeader getReceiptById(int id);
     public ImportReceiptHeaderCreateResponse createReceipt(ImportReceiptHeaderCreateRequest request);
     public ImportReceiptHeaderUpdateResponse updateReceiptPartially(Integer receiptID, ImportReceiptHeaderUpdateRequest request);
+    public List<ImportReceiptHeader> getReceiptsByDateRange(LocalDate fromDate, LocalDate toDate);
 }

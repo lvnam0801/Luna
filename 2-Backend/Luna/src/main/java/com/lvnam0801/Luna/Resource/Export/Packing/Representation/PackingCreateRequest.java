@@ -5,6 +5,7 @@ import java.sql.Date;
 public record PackingCreateRequest(
     String packingNumber,
     Integer orderID,
+    Integer orderLineItemID,
     Integer packToLocationID,
     String status,
     Date packedDate

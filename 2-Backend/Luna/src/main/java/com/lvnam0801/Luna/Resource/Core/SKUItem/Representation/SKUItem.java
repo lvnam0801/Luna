@@ -6,13 +6,15 @@ public record SKUItem(
     // SKIItem table
     Integer itemID, 
     Integer productID,
+    String productCode,
     String SKU, 
     Integer quantity, 
     String status,
     
     // Product table
     String name, 
-    String photoURL, 
+    String photoURL,
+    String unitName, 
     String origin, 
     Long wholesalePrice, 
     Long retailPrice,
@@ -32,5 +34,9 @@ public record SKUItem(
     String locationName,
     
     // From Import Receipt Line Item table get from Putaway
-    Date expirationDate
+    Date expirationDate,
+    
+    // Join table Receipt Line Item
+    Integer receiptLineItemID,
+    String lotNumber
 ) {}

@@ -2,6 +2,8 @@ package com.lvnam0801.Luna.Resource.Core.User.Controller;
 
 import com.lvnam0801.Luna.Resource.Core.User.Representation.User;
 import com.lvnam0801.Luna.Resource.Core.User.Representation.UserRequest;
+import com.lvnam0801.Luna.Resource.Core.User.Service.UserService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,8 +14,13 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/user")
 public class UserController {
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private final JdbcTemplate jdbcTemplate;
+    private final UserService userService;
+    public UserController(JdbcTemplate jdbcTemplate, UserService userService)
+    {
+        this.jdbcTemplate = jdbcTemplate;
+        this.userService = userService;
+    }
 
     @GetMapping("/get-all")
     public User[] getUsers() {
@@ -72,7 +79,8 @@ public class UserController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<String> getProfile() {
-        return ResponseEntity.ok("You are authenticated!");
+    public ResponseEntity<User> getProfile() {
+        User user = userService.getUserProfile();
+        return ResponseEntity.ok(user);
     }
 }

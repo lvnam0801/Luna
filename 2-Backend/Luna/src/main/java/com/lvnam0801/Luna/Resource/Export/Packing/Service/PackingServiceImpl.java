@@ -1,5 +1,7 @@
 package com.lvnam0801.Luna.Resource.Export.Packing.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -72,6 +74,7 @@ public class PackingServiceImpl implements PackingService {
                 packingID,
                 rs.getString("PackingNumber"),
                 rs.getInt("OrderID"),
+                rs.getInt("OrderLineItemID"),
                 rs.getInt("PackToLocationID"),
                 rs.getString("PackToLocationName"),
                 rs.getString("Status"),
@@ -103,6 +106,78 @@ public class PackingServiceImpl implements PackingService {
 
         return packingMap.values().toArray(new Packing[0]);
     }
+
+    @Override
+    public Packing[] getByOrderLineItemID(Integer orderLineItemID)
+    {
+        String sql = """
+            SELECT 
+                p.*, 
+                l.LocationName AS PackToLocationName,
+                u1.FullName AS CreatedByName,
+                u2.FullName AS UpdatedByName,
+                u3.FullName AS PackedByName,
+                pd.PackingDetailID,
+                pd.SKUItemID,
+                s.SKU,
+                pr.Name AS ProductName,
+                pd.PackedQuantity
+            FROM Packing p
+            JOIN Location l ON p.PackToLocationID = l.LocationID
+            LEFT JOIN User u1 ON p.CreatedBy = u1.UserID
+            LEFT JOIN User u2 ON p.UpdatedBy = u2.UserID
+            LEFT JOIN User u3 ON p.PackedBy = u3.UserID
+            LEFT JOIN PackingDetail pd ON p.PackingID = pd.PackingID
+            LEFT JOIN SKUItem s ON pd.SKUItemID = s.ItemID
+            LEFT JOIN Product pr ON s.ProductID = pr.ProductID
+            WHERE p.OrderLineItemID = ?
+            ORDER BY p.PackingID
+        """;
+
+        List<Packing> result = new ArrayList<>();
+        Map<Integer, Packing> packingMap = new LinkedHashMap<>();
+
+        jdbcTemplate.query(sql, new Object[]{orderLineItemID}, rs -> {
+            Integer packingID = rs.getInt("PackingID");
+
+            // Only create Packing object if not already present
+            packingMap.putIfAbsent(packingID, new Packing(
+                packingID,
+                rs.getString("PackingNumber"),
+                rs.getInt("OrderID"),
+                rs.getInt("OrderLineItemID"),
+                rs.getInt("PackToLocationID"),
+                rs.getString("PackToLocationName"),
+                rs.getString("Status"),
+                rs.getInt("PackedBy"),
+                rs.getString("PackedByName"),
+                rs.getDate("PackedDate"),
+                rs.getInt("CreatedBy"),
+                rs.getString("CreatedByName"),
+                rs.getTimestamp("CreatedAt"),
+                rs.getInt("UpdatedBy"),
+                rs.getString("UpdatedByName"),
+                rs.getTimestamp("UpdatedAt"),
+                new ArrayList<>() // Empty list of skuItems
+            ));
+
+            // Add packing detail if exists
+            if (rs.getObject("PackingDetailID") != null) {
+                Packing packing = packingMap.get(packingID);
+                packing.skuItems().add(new PackingDetail(
+                    rs.getInt("PackingDetailID"),
+                    packingID,
+                    rs.getInt("SKUItemID"),
+                    rs.getString("SKU"),
+                    rs.getString("ProductName"),
+                    rs.getInt("PackedQuantity")
+                ));
+            }
+        });
+
+        return packingMap.values().toArray(new Packing[0]);
+    }
+
 
     @Override
     public Packing getByID(Integer packingID) {
@@ -153,6 +228,7 @@ public class PackingServiceImpl implements PackingService {
                 rs.getInt("PackingID"),
                 rs.getString("PackingNumber"),
                 rs.getInt("OrderID"),
+                rs.getInt("OrderLineItemID"),
                 rs.getInt("PackToLocationID"),
                 rs.getString("PackToLocationName"),
                 rs.getString("Status"),
@@ -173,13 +249,14 @@ public class PackingServiceImpl implements PackingService {
     public PackingCreateResponse createPacking(PackingCreateRequest request) {
         Integer userID = userContext.getCurrentUserID();
         String sql = """
-            INSERT INTO Packing (PackingNumber, OrderID, PackToLocationID, Status, PackedBy, PackedDate, CreatedBy, UpdatedBy)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO Packing (PackingNumber, OrderID, OrderLineItemID, PackToLocationID, Status, PackedBy, PackedDate, CreatedBy, UpdatedBy)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         jdbcTemplate.update(sql,
                 request.packingNumber(),
                 request.orderID(),
+                request.orderLineItemID(),
                 request.packToLocationID(),
                 request.status(),
                 userID,
@@ -288,6 +365,90 @@ public class PackingServiceImpl implements PackingService {
             FROM Packing
             WHERE PackingID = ?
         """, new Object[]{packingID}, String.class);
+    }
+
+    @Override
+    public String generatePackingNumber() {
+        // Example: PACK-20240507-083015
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
+        String timestamp = LocalDateTime.now().format(formatter);
+        return "PACK-" + timestamp;
+    }
+
+    @Override
+    public Packing[] getAvailablePackingsByOrderID(Integer orderID) {
+        String sql = """
+            SELECT
+                p.*,
+                l.LocationName AS PackToLocationName,
+                u1.FullName AS CreatedByName,
+                u2.FullName AS UpdatedByName,
+                u3.FullName AS PackedByName,
+                pd.PackingDetailID,
+                pd.SKUItemID,
+                s.SKU,
+                pr.Name AS ProductName,
+                pd.PackedQuantity
+            FROM Packing p
+            JOIN Location l ON p.PackToLocationID = l.LocationID
+            LEFT JOIN User u1 ON p.CreatedBy = u1.UserID
+            LEFT JOIN User u2 ON p.UpdatedBy = u2.UserID
+            LEFT JOIN User u3 ON p.PackedBy = u3.UserID
+            LEFT JOIN PackingDetail pd ON p.PackingID = pd.PackingID
+            LEFT JOIN SKUItem s ON pd.SKUItemID = s.ItemID
+            LEFT JOIN Product pr ON s.ProductID = pr.ProductID
+            WHERE p.OrderID = ?
+            AND p.Status = 'completed'
+            AND p.PackingID NOT IN (
+                SELECT sd.PackingID
+                FROM Shipment s
+                JOIN ShipmentPacking sd ON s.ShipmentID = sd.ShipmentID
+                WHERE s.OrderID = ?
+            )
+            ORDER BY p.PackingID;
+        """;
+
+        Map<Integer, Packing> packingMap = new LinkedHashMap<>();
+
+        jdbcTemplate.query(sql,rs -> {
+                Integer packingID = rs.getInt("PackingID");
+
+                packingMap.putIfAbsent(packingID, new Packing(
+                    packingID,
+                    rs.getString("PackingNumber"),
+                    rs.getInt("OrderID"),
+                    rs.getInt("OrderLineItemID"),
+                    rs.getInt("PackToLocationID"),
+                    rs.getString("PackToLocationName"),
+                    rs.getString("Status"),
+                    rs.getInt("PackedBy"),
+                    rs.getString("PackedByName"),
+                    rs.getDate("PackedDate"),
+                    rs.getInt("CreatedBy"),
+                    rs.getString("CreatedByName"),
+                    rs.getTimestamp("CreatedAt"),
+                    rs.getInt("UpdatedBy"),
+                    rs.getString("UpdatedByName"),
+                    rs.getTimestamp("UpdatedAt"),
+                    new ArrayList<>()
+                ));
+
+                if (rs.getObject("PackingDetailID") != null) {
+                    Packing packing = packingMap.get(packingID);
+                    packing.skuItems().add(new PackingDetail(
+                        rs.getInt("PackingDetailID"),
+                        packingID,
+                        rs.getInt("SKUItemID"),
+                        rs.getString("SKU"),
+                        rs.getString("ProductName"),
+                        rs.getInt("PackedQuantity")
+                    ));
+                }
+            },
+            new Object[]{orderID, orderID}
+        );
+
+        return packingMap.values().toArray(new Packing[0]);
     }
 }
 

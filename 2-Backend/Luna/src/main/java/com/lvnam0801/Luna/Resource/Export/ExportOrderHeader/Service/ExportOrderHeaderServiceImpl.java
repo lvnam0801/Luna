@@ -1,6 +1,7 @@
 package com.lvnam0801.Luna.Resource.Export.ExportOrderHeader.Service;
 
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -170,7 +171,7 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
         """;
 
         try {
-            return jdbcTemplate.queryForObject(sql, new Object[]{orderID}, (rs, rowNum) ->
+            return jdbcTemplate.queryForObject(sql, (rs, rowNum) ->
                 new ExportOrderHeader(
                     rs.getInt("OrderID"),
                     rs.getString("OrderNumber"),
@@ -208,7 +209,8 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
                     rs.getString("UpdatedByName"),
                     rs.getTimestamp("CreatedAt"),
                     rs.getTimestamp("UpdatedAt")
-                )
+                ),
+                new Object[]{orderID}
             );
         } catch (EmptyResultDataAccessException e) {
             return null; // if not found, return null gracefully
@@ -354,5 +356,86 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
 
         String message = "Export Order updated successfully.";
         return new ExportOrderHeaderUpdateResponse(orderID, message);
+    }
+
+    @Override
+    public List<ExportOrderHeader> getExportOrdersByDateRange(LocalDate fromDate, LocalDate toDate) {
+        String sql = """
+            SELECT
+                o.OrderID,
+                o.OrderNumber,
+                o.CustomerID,
+                customer.ContactName AS CustomerName,
+                o.CarrierID,
+                carrier.ContactName AS CarrierName,
+                o.WarehouseID,
+                w.Name AS WarehouseName,
+                o.ShippingAddressID,
+                a.StreetAddress,
+                a.City,
+                a.StateProvince,
+                a.PostalCode,
+                a.Country,
+                o.OrderDate,
+                o.RequestedDeliveryDate,
+                o.ShippingMethod,
+                o.OrderStatus,
+                o.Notes,
+                o.Status,
+                o.ReceiptID,
+                o.CreatedBy,
+                createdByUser.FullName AS CreatedByName,
+                o.UpdatedBy,
+                updatedByUser.FullName AS UpdatedByName,
+                o.CreatedAt,
+                o.UpdatedAt
+            FROM ExportOrderHeader o
+            LEFT JOIN Party customer ON o.CustomerID = customer.PartyID
+            LEFT JOIN Party carrier ON o.CarrierID = carrier.PartyID
+            LEFT JOIN Warehouse w ON o.WarehouseID = w.WarehouseID
+            LEFT JOIN Address a ON o.ShippingAddressID = a.AddressID
+            LEFT JOIN User createdByUser ON o.CreatedBy = createdByUser.UserID
+            LEFT JOIN User updatedByUser ON o.UpdatedBy = updatedByUser.UserID
+            WHERE o.OrderDate BETWEEN ? AND ?
+            AND o.Status = 'active'
+            ORDER BY o.OrderDate DESC
+            """;
+
+        return jdbcTemplate.query(
+            sql,
+            (rs, rowNum) -> new ExportOrderHeader(
+                rs.getInt("OrderID"),
+                rs.getString("OrderNumber"),
+                rs.getInt("CustomerID"),
+                rs.getString("CustomerName"),
+                rs.getInt("CarrierID"),
+                rs.getString("CarrierName"),
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
+                rs.getInt("ShippingAddressID"),
+                new Address(
+                    rs.getInt("ShippingAddressID"),
+                    rs.getString("StreetAddress"),
+                    rs.getString("City"),
+                    rs.getString("StateProvince"),
+                    rs.getString("PostalCode"),
+                    rs.getString("Country")
+                ),
+                rs.getDate("OrderDate"),
+                rs.getDate("RequestedDeliveryDate"),
+                rs.getString("ShippingMethod"),
+                rs.getString("OrderStatus"),
+                rs.getString("Notes"),
+                rs.getString("Status"),
+                rs.getObject("ReceiptID", Integer.class),
+                rs.getInt("CreatedBy"),
+                rs.getString("CreatedByName"),
+                rs.getInt("UpdatedBy"),
+                rs.getString("UpdatedByName"),
+                rs.getTimestamp("CreatedAt"),
+                rs.getTimestamp("UpdatedAt")
+            ),
+            new Object[]{fromDate, toDate}
+        );
     }
 }

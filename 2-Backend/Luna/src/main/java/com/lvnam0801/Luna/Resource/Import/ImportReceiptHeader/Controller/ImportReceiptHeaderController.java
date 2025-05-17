@@ -7,6 +7,10 @@ import com.lvnam0801.Luna.Resource.Import.ImportReceiptHeader.Representation.Imp
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptHeader.Representation.ImportReceiptHeaderUpdateResponse;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptHeader.Service.ImportReceiptHeaderService;
 
+import java.time.LocalDate;
+import java.util.List;
+
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -71,6 +75,19 @@ public class ImportReceiptHeaderController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("Failed to update receipt: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/get-by-date-range")
+    public ResponseEntity<?> getReceiptsByDateRange(
+            @RequestParam("fromDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam("toDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        try {
+            List<ImportReceiptHeader> receipts = importReceiptHeaderService.getReceiptsByDateRange(fromDate, toDate);
+            return ResponseEntity.ok(receipts);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Failed to fetch import receipts by date range: " + e.getMessage());
         }
     }
 }

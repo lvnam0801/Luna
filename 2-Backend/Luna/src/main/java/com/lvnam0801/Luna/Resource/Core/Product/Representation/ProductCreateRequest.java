@@ -11,6 +11,7 @@ public class ProductCreateRequest {
     private String name;
     private String productCode;
     private String photoURL;
+    private String unitName;
     private String origin;
     private int wholesalePrice;
     private int retailPrice;

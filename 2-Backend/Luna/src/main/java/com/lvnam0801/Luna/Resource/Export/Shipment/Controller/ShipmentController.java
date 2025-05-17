@@ -95,4 +95,15 @@ public class ShipmentController {
                     .body("Failed to fetch packings: " + e.getMessage());
         }
     }
+
+    @GetMapping("/get-available-packings/{orderID}")
+    public ResponseEntity<?> getAllAvailablePackings(@PathVariable Integer orderID) {
+        try {
+            Packing[] availablePackings = shipmentService.getAvailablePackingsByOrderID(orderID);
+            return ResponseEntity.ok(availablePackings);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to fetch packings: " + e.getMessage());
+        }
+    }
 }

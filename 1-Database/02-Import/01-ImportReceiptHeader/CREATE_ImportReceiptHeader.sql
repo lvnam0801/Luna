@@ -1,18 +1,19 @@
 CREATE TABLE ImportReceiptHeader (
     ReceiptID INT AUTO_INCREMENT PRIMARY KEY,                 -- Unique identifier for this import receipt
+    SupplierID INT,
+    CarrierID INT,
+    WarehouseID INT NOT NULL,
+    ReceivingDockID INT NULL,
+    OriginLocationID INT,                                     -- Foreign key to Address table
+
     ReceiptNumber VARCHAR(100) NOT NULL UNIQUE,               -- External/internal receipt number
     ASNNumber VARCHAR(100),                                   -- Advanced Shipping Notice number
     PONumber VARCHAR(100),                                    -- Purchase Order number
-    OriginLocationID INT,                                     -- Foreign key to Address table
     ExpectedArrivalDate DATE,
     ActualArrivalDate DATE,
     ReceiptStatus ENUM('pending', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
     Notes TEXT,
 
-    CarrierID INT,
-    SupplierID INT,
-    WarehouseID INT NOT NULL,
-    ReceivingDockID INT NULL,
     CreatedBy INT,
     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UpdatedBy INT,

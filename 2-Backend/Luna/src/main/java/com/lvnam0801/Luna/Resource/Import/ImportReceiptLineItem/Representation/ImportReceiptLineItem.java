@@ -6,6 +6,10 @@ import java.sql.Timestamp;
 
 public record ImportReceiptLineItem(
     Integer receiptLineItemID,
+    
+    // Integer warehouseID,
+    // String warehouseName,
+
     Integer receiptID,
     
     Integer productID,

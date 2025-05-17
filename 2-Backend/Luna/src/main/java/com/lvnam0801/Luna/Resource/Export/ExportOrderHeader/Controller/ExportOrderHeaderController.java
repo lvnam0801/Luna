@@ -7,6 +7,10 @@ import com.lvnam0801.Luna.Resource.Export.ExportOrderHeader.Representation.Expor
 import com.lvnam0801.Luna.Resource.Export.ExportOrderHeader.Representation.ExportOrderHeaderUpdateResponse;
 import com.lvnam0801.Luna.Resource.Export.ExportOrderHeader.Service.ExportOrderHeaderService;
 
+import java.time.LocalDate;
+import java.util.List;
+
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -71,6 +75,20 @@ public class ExportOrderHeaderController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                 .body("Failed to update export order: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/get-by-date-range")
+    public ResponseEntity<?> getExportOrdersByDateRange(
+            @RequestParam("fromDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam("toDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        try {
+            List<ExportOrderHeader> orders = exportOrderHeaderService.getExportOrdersByDateRange(fromDate, toDate);
+            return ResponseEntity.ok(orders);
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to fetch export orders by date range: " + e.getMessage());
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.lvnam0801.Luna.Resource.Abstract.Dashboard.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -46,10 +47,10 @@ public class DashboardServiceImpl implements DashboardService {
     public StockLevelOverview fetchStockLevelOverview() {
         // 1. Fetch product name and stock count
         String productStockQuery = """
-            SELECT p.Name AS name, SUM(s.Quantity) AS count
+            SELECT p.Name AS name, SUM(s.Quantity) AS count, p.UnitName as unitName
             FROM SKUItem s
             JOIN Product p ON s.ProductID = p.ProductID
-            WHERE s.Status = 'in_stock'
+            WHERE s.Status = 'in_stock' AND s.Quantity > 0
             GROUP BY p.ProductID, p.Name
         """;
 
@@ -57,7 +58,8 @@ public class DashboardServiceImpl implements DashboardService {
             productStockQuery,
             (rs, rowNum) -> new ProductStockByName(
                 rs.getString("name"),
-                rs.getInt("count")
+                rs.getInt("count"),
+                rs.getString("unitName")
             )
         );
 
@@ -65,7 +67,7 @@ public class DashboardServiceImpl implements DashboardService {
         String totalProductTypesQuery = """
             SELECT COUNT(DISTINCT s.ProductID)
             FROM SKUItem s
-            WHERE s.Status = 'in_stock'
+            WHERE s.Status = 'in_stock' AND s.Quantity > 0
         """;
 
         Integer totalProductTypes = jdbcTemplate.queryForObject(totalProductTypesQuery, Integer.class);
@@ -94,7 +96,9 @@ public class DashboardServiceImpl implements DashboardService {
                 p.Name AS productName,
                 SUM(eol.ExportedQuantity) AS unitsSold
             FROM ExportOrderLineItem eol
+            JOIN ExportOrderHeader eh ON eol.OrderID = eh.OrderID
             JOIN Product p ON eol.ProductID = p.ProductID
+            WHERE eh.ExportPurpose='sale'
             GROUP BY p.ProductID, p.ProductCode, p.Name
             ORDER BY unitsSold DESC
             LIMIT 10
@@ -107,6 +111,87 @@ public class DashboardServiceImpl implements DashboardService {
                 rs.getString("productName"),
                 rs.getInt("unitsSold")
             )
+        );
+    }
+
+    @Override
+    public List<BestSellingProduct> fetchBestSellingProducts(Integer warehouseID) {
+        String sql = """
+            SELECT 
+                p.ProductCode AS productCode,
+                p.Name AS productName,
+                SUM(eol.ExportedQuantity) AS unitsSold
+            FROM ExportOrderLineItem eol
+            JOIN ExportOrderHeader eh ON eol.OrderID = eh.OrderID
+            JOIN Product p ON eol.ProductID = p.ProductID
+            WHERE eh.ExportPurpose='sale' AND eh.WarehouseID = ?
+            GROUP BY p.ProductID, p.ProductCode, p.Name
+            ORDER BY unitsSold DESC
+            LIMIT 10
+        """;
+    
+        return jdbcTemplate.query(
+            sql,
+            (rs, rowNum) -> new BestSellingProduct(
+                rs.getString("productCode"),
+                rs.getString("productName"),
+                rs.getInt("unitsSold")
+            ),
+            new Object[]{warehouseID}
+        );
+    }
+
+    @Override
+    public List<BestSellingProduct> fetchBestSellingProducts(LocalDate fromDate, LocalDate toDate) {
+        String sql = """
+            SELECT 
+                p.ProductCode AS productCode,
+                p.Name AS productName,
+                SUM(eol.ExportedQuantity) AS unitsSold
+            FROM ExportOrderLineItem eol
+            JOIN ExportOrderHeader eh ON eol.OrderID = eh.OrderID
+            JOIN Product p ON eol.ProductID = p.ProductID
+            WHERE eh.ExportPurpose='sale' AND eh.OrderDate BETWEEN ? AND ?
+            GROUP BY p.ProductID, p.ProductCode, p.Name
+            ORDER BY unitsSold DESC
+            LIMIT 10
+        """;
+    
+        return jdbcTemplate.query(
+            sql,
+            (rs, rowNum) -> new BestSellingProduct(
+                rs.getString("productCode"),
+                rs.getString("productName"),
+                rs.getInt("unitsSold")
+            ),
+            new Object[]{fromDate, toDate}
+        );
+    }
+
+    @Override
+    public List<BestSellingProduct> fetchBestSellingProducts(Integer warehouseID, LocalDate fromDate, LocalDate toDate) {
+        String sql = """
+            SELECT 
+                p.ProductCode AS productCode,
+                p.Name AS productName,
+                SUM(eol.ExportedQuantity) AS unitsSold
+            FROM ExportOrderLineItem eol
+            JOIN ExportOrderHeader eh ON eol.OrderID = eh.OrderID
+            JOIN Product p ON eol.ProductID = p.ProductID
+            WHERE eh.ExportPurpose='sale' AND eh.WarehouseID = ? AND eh.OrderDate BETWEEN ? AND ?
+            GROUP BY p.ProductID, p.ProductCode, p.Name
+            ORDER BY unitsSold DESC
+            LIMIT 10
+        """;
+    
+        return jdbcTemplate.query(
+            sql,
+            (rs, rowNum) -> new BestSellingProduct(
+                rs.getString("productCode"),
+                rs.getString("productName"),
+                rs.getInt("unitsSold")
+            ),
+            new Object[]{warehouseID, fromDate, toDate}
         );
     }
 
@@ -208,6 +293,128 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
+    public List<DailyRevenueEntry> fetchDailyRevenue(LocalDate fromDate, LocalDate toDate) {
+        String sql = """
+            SELECT 
+                DATE_FORMAT(e.day, '%Y-%m-%d') AS day,
+                e.revenue,
+                IFNULL(i.cost, 0) AS cost
+            FROM (
+                SELECT DATE(eh.OrderDate) AS day,
+                       SUM(eol.ExportedQuantity * eol.UnitPrice) AS revenue
+                FROM ExportOrderHeader eh
+                JOIN ExportOrderLineItem eol ON eh.OrderID = eol.OrderID
+                WHERE eh.Status = 'active' AND eh.OrderDate BETWEEN ? AND ?
+                GROUP BY DATE(eh.OrderDate)
+            ) e
+            LEFT JOIN (
+                SELECT DATE(ih.ActualArrivalDate) AS day,
+                       SUM(il.ReceivedQuantity * il.UnitCost) AS cost
+                FROM ImportReceiptHeader ih
+                JOIN ImportReceiptLineItem il ON ih.ReceiptID = il.ReceiptID
+                WHERE ih.Status = 'active' AND ih.ActualArrivalDate BETWEEN ? AND ?
+                GROUP BY DATE(ih.ActualArrivalDate)
+            ) i ON e.day = i.day
+    
+            UNION
+    
+            SELECT 
+                DATE_FORMAT(i.day, '%Y-%m-%d') AS day,
+                IFNULL(e.revenue, 0) AS revenue,
+                i.cost
+            FROM (
+                SELECT DATE(eh.OrderDate) AS day,
+                       SUM(eol.ExportedQuantity * eol.UnitPrice) AS revenue
+                FROM ExportOrderHeader eh
+                JOIN ExportOrderLineItem eol ON eh.OrderID = eol.OrderID
+                WHERE eh.Status = 'active' AND eh.OrderDate BETWEEN ? AND ?
+                GROUP BY DATE(eh.OrderDate)
+            ) e
+            RIGHT JOIN (
+                SELECT DATE(ih.ActualArrivalDate) AS day,
+                       SUM(il.ReceivedQuantity * il.UnitCost) AS cost
+                FROM ImportReceiptHeader ih
+                JOIN ImportReceiptLineItem il ON ih.ReceiptID = il.ReceiptID
+                WHERE ih.Status = 'active' AND ih.ActualArrivalDate BETWEEN ? AND ?
+                GROUP BY DATE(ih.ActualArrivalDate)
+            ) i ON e.day = i.day
+    
+            ORDER BY day ASC
+        """;
+    
+        return jdbcTemplate.query(
+            sql,
+            (rs, rowNum) -> new DailyRevenueEntry(
+                rs.getString("day"),
+                rs.getLong("revenue"),
+                rs.getLong("cost")
+            ),
+            new Object[]{fromDate, toDate, fromDate, toDate, fromDate, toDate, fromDate, toDate}
+        );
+    }
+
+    public List<DailyRevenueEntry> fetchDailyRevenue(Integer warehouseID, LocalDate fromDate, LocalDate toDate)
+    {
+        String sql = """
+            SELECT 
+                DATE_FORMAT(e.day, '%Y-%m-%d') AS day,
+                e.revenue,
+                IFNULL(i.cost, 0) AS cost
+            FROM (
+                SELECT DATE(eh.OrderDate) AS day,
+                       SUM(eol.ExportedQuantity * eol.UnitPrice) AS revenue
+                FROM ExportOrderHeader eh
+                JOIN ExportOrderLineItem eol ON eh.OrderID = eol.OrderID
+                WHERE eh.Status = 'active' AND eh.warehouseID = ? AND eh.OrderDate BETWEEN ? AND ?
+                GROUP BY DATE(eh.OrderDate)
+            ) e
+            LEFT JOIN (
+                SELECT DATE(ih.ActualArrivalDate) AS day,
+                       SUM(il.ReceivedQuantity * il.UnitCost) AS cost
+                FROM ImportReceiptHeader ih
+                JOIN ImportReceiptLineItem il ON ih.ReceiptID = il.ReceiptID
+                WHERE ih.Status = 'active' AND ih.WarehouseID = ? AND ih.ActualArrivalDate BETWEEN ? AND ?
+                GROUP BY DATE(ih.ActualArrivalDate)
+            ) i ON e.day = i.day
+    
+            UNION
+    
+            SELECT 
+                DATE_FORMAT(i.day, '%Y-%m-%d') AS day,
+                IFNULL(e.revenue, 0) AS revenue,
+                i.cost
+            FROM (
+                SELECT DATE(eh.OrderDate) AS day,
+                       SUM(eol.ExportedQuantity * eol.UnitPrice) AS revenue
+                FROM ExportOrderHeader eh
+                JOIN ExportOrderLineItem eol ON eh.OrderID = eol.OrderID
+                WHERE eh.Status = 'active' AND eh.warehouseID = ? AND eh.OrderDate BETWEEN ? AND ?
+                GROUP BY DATE(eh.OrderDate)
+            ) e
+            RIGHT JOIN (
+                SELECT DATE(ih.ActualArrivalDate) AS day,
+                       SUM(il.ReceivedQuantity * il.UnitCost) AS cost
+                FROM ImportReceiptHeader ih
+                JOIN ImportReceiptLineItem il ON ih.ReceiptID = il.ReceiptID
+                WHERE ih.Status = 'active' AND ih.WarehouseID = ? AND ih.ActualArrivalDate BETWEEN ? AND ?
+                GROUP BY DATE(ih.ActualArrivalDate)
+            ) i ON e.day = i.day
+    
+            ORDER BY day ASC
+        """;
+    
+        return jdbcTemplate.query(
+            sql,
+            (rs, rowNum) -> new DailyRevenueEntry(
+                rs.getString("day"),
+                rs.getLong("revenue"),
+                rs.getLong("cost")
+            ),
+            new Object[]{warehouseID, fromDate, toDate, warehouseID, fromDate, toDate, warehouseID, fromDate, toDate, warehouseID, fromDate, toDate}
+        );
+    }
+
+    @Override
     public List<RecentExportOrderEntry> fetchRecentExportOrders() {
         String sql = """
             SELECT 
@@ -239,6 +446,102 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
+    public List<RecentExportOrderEntry> fetchRecentExportOrders(Integer warehouseID) 
+    {
+        String sql = """
+            SELECT 
+                eh.OrderID, eh.OrderNumber,
+                p.ContactName AS customerName,
+                SUM(eol.ExportedQuantity * eol.UnitPrice) AS totalPrice,
+                eh.OrderStatus AS status,
+                eh.OrderDate
+            FROM ExportOrderHeader eh
+            JOIN Party p ON eh.CustomerID = p.PartyID
+            JOIN ExportOrderLineItem eol ON eh.OrderID = eol.OrderID
+            WHERE eh.Status = 'active' AND eh.WarehouseID = ?
+            GROUP BY eh.OrderID, p.ContactName, eh.OrderStatus, eh.OrderDate
+            ORDER BY eh.OrderDate DESC
+        """;
+
+        return jdbcTemplate.query(sql, (rs, rowNum) ->
+            new RecentExportOrderEntry(
+                rs.getInt("OrderID"),
+                rs.getString("OrderNumber"),
+                rs.getString("customerName"),
+                rs.getBigDecimal("totalPrice"),
+                rs.getString("status"),
+                rs.getDate("OrderDate").toLocalDate()
+            ), 
+            new Object[]{warehouseID} 
+        );
+    }
+
+    @Override
+    public List<RecentExportOrderEntry> fetchRecentExportOrders(LocalDate fromDate, LocalDate toDate) 
+    {
+        String sql = """
+            SELECT 
+                eh.OrderID, eh.OrderNumber,
+                p.ContactName AS customerName,
+                SUM(eol.ExportedQuantity * eol.UnitPrice) AS totalPrice,
+                eh.OrderStatus AS status,
+                eh.OrderDate
+            FROM ExportOrderHeader eh
+            JOIN Party p ON eh.CustomerID = p.PartyID
+            JOIN ExportOrderLineItem eol ON eh.OrderID = eol.OrderID
+            WHERE eh.Status = 'active'
+            AND eh.OrderDate BETWEEN ? AND ?
+            GROUP BY eh.OrderID, p.ContactName, eh.OrderStatus, eh.OrderDate
+            ORDER BY eh.OrderDate DESC
+        """;
+
+        return jdbcTemplate.query(sql, (rs, rowNum) ->
+            new RecentExportOrderEntry(
+                rs.getInt("OrderID"),
+                rs.getString("OrderNumber"),
+                rs.getString("customerName"),
+                rs.getBigDecimal("totalPrice"),
+                rs.getString("status"),
+                rs.getDate("OrderDate").toLocalDate()
+            ), 
+            new Object[]{fromDate, toDate} 
+        );
+    }
+
+    @Override
+    public List<RecentExportOrderEntry> fetchRecentExportOrders(Integer warehouseID, LocalDate fromDate, LocalDate toDate) 
+    {
+        String sql = """
+            SELECT 
+                eh.OrderID, eh.OrderNumber,
+                p.ContactName AS customerName,
+                SUM(eol.ExportedQuantity * eol.UnitPrice) AS totalPrice,
+                eh.OrderStatus AS status,
+                eh.OrderDate
+            FROM ExportOrderHeader eh
+            JOIN Party p ON eh.CustomerID = p.PartyID
+            JOIN ExportOrderLineItem eol ON eh.OrderID = eol.OrderID
+            WHERE eh.Status = 'active' AND eh.WarehouseID = ? AND eh.OrderDate BETWEEN ? AND ?
+            GROUP BY eh.OrderID, p.ContactName, eh.OrderStatus, eh.OrderDate
+            ORDER BY eh.OrderDate DESC
+        """;
+
+        return jdbcTemplate.query(sql, (rs, rowNum) ->
+            new RecentExportOrderEntry(
+                rs.getInt("OrderID"),
+                rs.getString("OrderNumber"),
+                rs.getString("customerName"),
+                rs.getBigDecimal("totalPrice"),
+                rs.getString("status"),
+                rs.getDate("OrderDate").toLocalDate()
+            ), 
+            new Object[]{warehouseID, fromDate, toDate} 
+        );
+    }
+
+    
+
+    @Override
     public List<RecentImportReceiptEntry> fetchRecentImportReceipts() {
         String sql = """
             SELECT 
@@ -267,6 +570,103 @@ public class DashboardServiceImpl implements DashboardService {
                 rs.getString("status"),
                 rs.getDate("date").toLocalDate()
             )
+        );
+    }
+
+    @Override
+    public List<RecentImportReceiptEntry> fetchRecentImportReceipts(Integer warehouseID)
+    {
+        String sql = """
+            SELECT 
+                ih.ReceiptID,
+                ih.ReceiptNumber,
+                p.ContactName AS providerName,
+                SUM(il.ReceivedQuantity * il.UnitCost) AS totalPrice,
+                ih.ReceiptStatus AS status,
+                ih.ActualArrivalDate AS date
+            FROM ImportReceiptHeader ih
+            JOIN Party p ON ih.SupplierID = p.PartyID
+            JOIN ImportReceiptLineItem il ON ih.ReceiptID = il.ReceiptID
+            WHERE ih.Status = 'active' AND ih.WarehouseID = ?
+            GROUP BY ih.ReceiptID, p.ContactName, ih.ReceiptStatus, ih.ActualArrivalDate
+            ORDER BY ih.ActualArrivalDate DESC
+        """;
+    
+        return jdbcTemplate.query(sql, (rs, rowNum) ->
+            new RecentImportReceiptEntry(
+                rs.getInt("ReceiptID"),
+                rs.getString("ReceiptNumber"),
+                rs.getString("providerName"),
+                rs.getBigDecimal("totalPrice"),
+                rs.getString("status"),
+                rs.getDate("date").toLocalDate()
+            ),
+            new Object[]{warehouseID}
+        );
+    }
+
+    @Override
+    public List<RecentImportReceiptEntry> fetchRecentImportReceipts(LocalDate fromDate, LocalDate toDate)
+    {
+        String sql = """
+            SELECT 
+                ih.ReceiptID,
+                ih.ReceiptNumber,
+                p.ContactName AS providerName,
+                SUM(il.ReceivedQuantity * il.UnitCost) AS totalPrice,
+                ih.ReceiptStatus AS status,
+                ih.ActualArrivalDate AS date
+            FROM ImportReceiptHeader ih
+            JOIN Party p ON ih.SupplierID = p.PartyID
+            JOIN ImportReceiptLineItem il ON ih.ReceiptID = il.ReceiptID
+            WHERE ih.Status = 'active'
+              AND ih.ActualArrivalDate BETWEEN ? AND ?
+            GROUP BY ih.ReceiptID, p.ContactName, ih.ReceiptStatus, ih.ActualArrivalDate
+            ORDER BY ih.ActualArrivalDate DESC
+        """;
+    
+        return jdbcTemplate.query(sql, (rs, rowNum) ->
+            new RecentImportReceiptEntry(
+                rs.getInt("ReceiptID"),
+                rs.getString("ReceiptNumber"),
+                rs.getString("providerName"),
+                rs.getBigDecimal("totalPrice"),
+                rs.getString("status"),
+                rs.getDate("date").toLocalDate()
+            ),
+            new Object[]{fromDate, toDate}
+        );
+    }
+
+    @Override
+    public List<RecentImportReceiptEntry> fetchRecentImportReceipts(Integer warehouseID, LocalDate fromDate, LocalDate toDate)
+    {
+        String sql = """
+            SELECT 
+                ih.ReceiptID,
+                ih.ReceiptNumber,
+                p.ContactName AS providerName,
+                SUM(il.ReceivedQuantity * il.UnitCost) AS totalPrice,
+                ih.ReceiptStatus AS status,
+                ih.ActualArrivalDate AS date
+            FROM ImportReceiptHeader ih
+            JOIN Party p ON ih.SupplierID = p.PartyID
+            JOIN ImportReceiptLineItem il ON ih.ReceiptID = il.ReceiptID
+            WHERE ih.Status = 'active' AND ih.WarehouseID = ? AND ih.ActualArrivalDate BETWEEN ? AND ?
+            GROUP BY ih.ReceiptID, p.ContactName, ih.ReceiptStatus, ih.ActualArrivalDate
+            ORDER BY ih.ActualArrivalDate DESC
+        """;
+    
+        return jdbcTemplate.query(sql, (rs, rowNum) ->
+            new RecentImportReceiptEntry(
+                rs.getInt("ReceiptID"),
+                rs.getString("ReceiptNumber"),
+                rs.getString("providerName"),
+                rs.getBigDecimal("totalPrice"),
+                rs.getString("status"),
+                rs.getDate("date").toLocalDate()
+            ),
+            new Object[]{warehouseID, fromDate, toDate}
         );
     }
 }

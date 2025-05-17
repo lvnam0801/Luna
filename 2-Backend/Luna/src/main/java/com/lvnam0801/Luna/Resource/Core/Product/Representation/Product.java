@@ -8,6 +8,7 @@ public record Product(
     String productCode,
     String name,
     String photoURL,
+    String unitName,
     String origin,
     Long wholesalePrice,
     Long retailPrice,

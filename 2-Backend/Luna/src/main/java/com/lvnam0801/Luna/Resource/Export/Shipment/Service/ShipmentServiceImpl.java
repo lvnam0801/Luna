@@ -9,6 +9,8 @@ import com.lvnam0801.Luna.Resource.Export.ExportActivityLog.Representation.Expor
 import com.lvnam0801.Luna.Resource.Export.ExportActivityLog.Representation.ExportActivityLogRequest;
 import com.lvnam0801.Luna.Resource.Export.ExportActivityLog.Representation.ExportActivityTargetType;
 import com.lvnam0801.Luna.Resource.Export.ExportActivityLog.Service.ExportActivityLogService;
+import com.lvnam0801.Luna.Resource.Export.Packing.Representation.Packing;
+import com.lvnam0801.Luna.Resource.Export.Packing.Service.PackingService;
 import com.lvnam0801.Luna.Resource.Export.Shipment.Representation.Shipment;
 import com.lvnam0801.Luna.Resource.Export.Shipment.Representation.ShipmentCreateRequest;
 import com.lvnam0801.Luna.Resource.Export.Shipment.Representation.ShipmentCreateResponse;
@@ -27,11 +29,13 @@ public class ShipmentServiceImpl implements ShipmentService {
     private final JdbcTemplate jdbcTemplate;
     private final ExportActivityLogService activityLogService;
     private final UserContext userContext;
+    private final PackingService packingService;
     
-    public ShipmentServiceImpl(JdbcTemplate jdbcTemplate, ExportActivityLogService activityLogService, UserContext userContext) {
+    public ShipmentServiceImpl(JdbcTemplate jdbcTemplate, ExportActivityLogService activityLogService, UserContext userContext, PackingService packingService) {
         this.jdbcTemplate = jdbcTemplate;
         this.activityLogService = activityLogService;
         this.userContext = userContext;
+        this.packingService = packingService;
     }
 
     @Override
@@ -342,4 +346,11 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         return mappings.toArray(ShipmentPacking[]::new);
     }
+
+    @Override
+    public Packing[] getAvailablePackingsByOrderID(Integer orderID)
+    {
+        return packingService.getAvailablePackingsByOrderID(orderID);
+    }
+
 }

@@ -24,10 +24,20 @@ public class PackingController {
         this.packingService = packingService;
     }
 
+
+    @GetMapping("/get-by-order/{orderID}")
+    public ResponseEntity<?> getByOrderID(@PathVariable Integer orderID) {
+        try {
+            return ResponseEntity.ok(packingService.getByOrderID(orderID));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to fetch packing records: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/get-by-order-line/{orderLineItemID}")
     public ResponseEntity<?> getByOrderLineItemID(@PathVariable Integer orderLineItemID) {
         try {
-            return ResponseEntity.ok(packingService.getByOrderID(orderLineItemID));
+            return ResponseEntity.ok(packingService.getByOrderLineItemID(orderLineItemID));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Failed to fetch packing records: " + e.getMessage());
         }
@@ -75,6 +85,17 @@ public class PackingController {
             return ResponseEntity.ok(packingService.addPackingDetail(request));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Failed to add packing detail: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/generate-number")
+    public ResponseEntity<?> getGeneratedNumber() {
+        try {
+            String generatedNumber = packingService.generatePackingNumber();
+            System.out.println("Generated number: " + generatedNumber);
+            return ResponseEntity.ok(generatedNumber);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to fetch packing records: " + e.getMessage());
         }
     }
 }

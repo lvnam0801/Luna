@@ -1,1 +1,6 @@
+DELETE FROM PackingDetail;
+ALTER TABLE PackingDetail AUTO_INCREMENT = 1;
+
+
 DELETE FROM Packing;
+ALTER TABLE Packing AUTO_INCREMENT = 1;

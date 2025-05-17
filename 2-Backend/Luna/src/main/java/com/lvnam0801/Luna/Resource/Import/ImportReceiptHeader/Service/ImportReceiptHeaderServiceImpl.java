@@ -1,5 +1,6 @@
 package com.lvnam0801.Luna.Resource.Import.ImportReceiptHeader.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -185,7 +186,6 @@ public class ImportReceiptHeaderServiceImpl implements ImportReceiptHeaderServic
         try {
             ImportReceiptHeader receipt = jdbcTemplate.queryForObject(
                 sql,
-                new Object[]{id},
                 (rs, rowNum) -> new ImportReceiptHeader(
                     rs.getInt("ReceiptID"),
                     rs.getString("ReceiptNumber"),
@@ -225,7 +225,8 @@ public class ImportReceiptHeaderServiceImpl implements ImportReceiptHeaderServic
                     rs.getInt("UpdatedBy"),
                     rs.getString("UpdatedByName"),
                     rs.getTimestamp("UpdatedAt")
-                )
+                ),
+                new Object[]{id}
             );
             return receipt;
         } catch (EmptyResultDataAccessException e) {
@@ -382,6 +383,89 @@ public class ImportReceiptHeaderServiceImpl implements ImportReceiptHeaderServic
 
     private String getReceiptNumberByID(Integer receiptID) {
         String sql = "SELECT ReceiptNumber FROM ImportReceiptHeader WHERE ReceiptID = ?";
-        return jdbcTemplate.queryForObject(sql, new Object[]{receiptID}, String.class);
+        return jdbcTemplate.queryForObject(sql, String.class, new Object[]{receiptID});
+    }
+
+    @Override
+    public List<ImportReceiptHeader> getReceiptsByDateRange(LocalDate fromDate, LocalDate toDate) {
+        String sql = """
+            SELECT
+                h.ReceiptID,
+                h.ReceiptNumber,
+                h.ASNNumber,
+                h.PONumber,
+                h.OriginLocationID,
+                a.StreetAddress,
+                a.City,
+                a.StateProvince,
+                a.PostalCode,
+                a.Country,
+                h.ExpectedArrivalDate,
+                h.ActualArrivalDate,
+                h.ReceiptStatus,
+                h.Notes,
+                h.Status,
+                h.CarrierID,
+                carrier.ContactName AS CarrierName,
+                h.SupplierID,
+                supplier.ContactName AS SupplierName,
+                h.WarehouseID,
+                w.Name AS WarehouseName,
+                h.ReceivingDockID,
+                l.LocationName AS ReceivingDockName,
+                h.CreatedBy,
+                createdByUser.FullName AS CreatedByName,
+                h.CreatedAt,
+                h.UpdatedBy,
+                updatedByUser.FullName AS UpdatedByName,
+                h.UpdatedAt
+            FROM ImportReceiptHeader h
+            LEFT JOIN Address a ON h.OriginLocationID = a.AddressID
+            LEFT JOIN Party carrier ON h.CarrierID = carrier.PartyID
+            LEFT JOIN Party supplier ON h.SupplierID = supplier.PartyID
+            LEFT JOIN Warehouse w ON h.WarehouseID = w.WarehouseID
+            LEFT JOIN Location l ON h.ReceivingDockID = l.LocationID
+            LEFT JOIN User createdByUser ON h.CreatedBy = createdByUser.UserID
+            LEFT JOIN User updatedByUser ON h.UpdatedBy = updatedByUser.UserID
+            WHERE h.ActualArrivalDate BETWEEN ? AND ?
+            ORDER BY h.ActualArrivalDate DESC
+            """;
+
+        return jdbcTemplate.query(sql, (rs, rowNum) -> new ImportReceiptHeader(
+                rs.getInt("ReceiptID"),
+                rs.getString("ReceiptNumber"),
+                rs.getString("ASNNumber"),
+                rs.getString("PONumber"),
+                rs.getInt("OriginLocationID"),
+                new Address(
+                    rs.getInt("OriginLocationID"),
+                    rs.getString("StreetAddress"),
+                    rs.getString("City"),
+                    rs.getString("StateProvince"),
+                    rs.getString("PostalCode"),
+                    rs.getString("Country")
+                ),
+                rs.getDate("ExpectedArrivalDate"),
+                rs.getDate("ActualArrivalDate"),
+                rs.getString("ReceiptStatus"),
+                rs.getString("Notes"),
+                rs.getString("Status"),
+                rs.getInt("CarrierID"),
+                rs.getString("CarrierName"),
+                rs.getInt("SupplierID"),
+                rs.getString("SupplierName"),
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
+                rs.getInt("ReceivingDockID"),
+                rs.getString("ReceivingDockName"),
+                rs.getInt("CreatedBy"),
+                rs.getString("CreatedByName"),
+                rs.getTimestamp("CreatedAt"),
+                rs.getInt("UpdatedBy"),
+                rs.getString("UpdatedByName"),
+                rs.getTimestamp("UpdatedAt")
+            ),
+            new Object[]{fromDate, toDate}
+        );
     }
 }

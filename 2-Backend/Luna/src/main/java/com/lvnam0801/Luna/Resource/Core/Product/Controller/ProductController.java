@@ -35,7 +35,7 @@ public class ProductController {
     public List<Product> getProducts() {
         // SQL Query to fetch products along with their dimensions
         String sql = """
-            SELECT p.ProductID, p.ProductCode, p.Name, p.PhotoURL, p.Origin, p.WholesalePrice, p.RetailPrice, p.Status, 
+            SELECT p.ProductID, p.ProductCode, p.Name, p.PhotoURL, p.UnitName, p.Origin, p.WholesalePrice, p.RetailPrice, p.Status, 
                 m.Name AS Manufacturer, c.Name AS Category, 
                 d.DimensionType, d.Value, d.Unit
             FROM Product p
@@ -57,6 +57,7 @@ public class ProductController {
                 (String) row.get("ProductCode"),
                 (String) row.get("Name"),
                 (String) row.get("PhotoURL"),
+                (String) row.get("UnitName"),
                 (String) row.get("Origin"),
                 (Long) row.get("WholesalePrice"),
                 (Long) row.get("RetailPrice"),
@@ -85,7 +86,7 @@ public class ProductController {
         // SQL query to fetch a specific product by ID along with its dimensions
         String sql = """
             SELECT 
-                p.ProductID, p.ProductCode, p.Name, p.PhotoURL, p.Origin, p.WholesalePrice, p.RetailPrice, p.Status,
+                p.ProductID, p.ProductCode, p.Name, p.PhotoURL, p.UnitName, p.Origin, p.WholesalePrice, p.RetailPrice, p.Status,
                 m.Name AS Manufacturer, c.Name AS Category,
                 d.DimensionType, d.Value, d.Unit
             FROM Product p
@@ -111,6 +112,7 @@ public class ProductController {
                     (String) row.get("ProductCode"),
                     (String) row.get("Name"),
                     (String) row.get("PhotoURL"),
+                    (String) row.get("UnitName"),
                     (String) row.get("Origin"),
                     (Long) row.get("WholesalePrice"),
                     (Long) row.get("RetailPrice"),
@@ -139,8 +141,8 @@ public class ProductController {
     public ResponseEntity<ProductCreateResponse> createProduct(@RequestBody ProductCreateRequest productRequest) {
         // SQL to insert a new Product
         String productSql = """
-            INSERT INTO Product (ProductCode, Name, PhotoURL, Origin, WholesalePrice, RetailPrice, Status, ManufacturerID, CategoryID)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO Product (ProductCode, Name, PhotoURL, UnitName, Origin, WholesalePrice, RetailPrice, Status, ManufacturerID, CategoryID)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         // Insert the Product
@@ -148,6 +150,7 @@ public class ProductController {
             productRequest.getProductCode(), 
             productRequest.getName(),
             productRequest.getPhotoURL(),
+            productRequest.getUnitName(),
             productRequest.getOrigin(),
             productRequest.getWholesalePrice(),
             productRequest.getRetailPrice(),

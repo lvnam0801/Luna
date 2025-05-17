@@ -1,5 +1,6 @@
 package com.lvnam0801.Luna.Resource.Export.Shipment.Service;
 
+import com.lvnam0801.Luna.Resource.Export.Packing.Representation.Packing;
 import com.lvnam0801.Luna.Resource.Export.Shipment.Representation.Shipment;
 import com.lvnam0801.Luna.Resource.Export.Shipment.Representation.ShipmentCreateRequest;
 import com.lvnam0801.Luna.Resource.Export.Shipment.Representation.ShipmentCreateResponse;
@@ -18,4 +19,5 @@ public interface ShipmentService {
 
     public ShipmentPacking[] getShipmentPackingsByShipmentID(Integer shipmentID);
     public ShipmentPackingCreateResponse createShipmentPacking(ShipmentPackingCreateRequest request);
+    public Packing[] getAvailablePackingsByOrderID(Integer orderID);
 }

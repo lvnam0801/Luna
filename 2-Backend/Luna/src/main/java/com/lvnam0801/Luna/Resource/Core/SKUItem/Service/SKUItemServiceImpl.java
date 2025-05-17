@@ -31,9 +31,11 @@ public class SKUItemServiceImpl implements SKUItemService {
                 s.SKU,
                 s.Quantity,
                 s.Status,
-    
+
+                p.ProductCode,
                 p.Name,
                 p.PhotoURL,
+                p.UnitName,
                 p.Origin,
                 p.WholesalePrice,
                 p.RetailPrice,
@@ -48,7 +50,10 @@ public class SKUItemServiceImpl implements SKUItemService {
                 l.LocationID,
                 l.LocationName AS LocationName,
     
-                r.ExpirationDate
+                r.ExpirationDate,
+                r.ReceiptLineItemID,
+                r.LotNumber
+
     
             FROM SKUItem s
             JOIN Product p ON s.ProductID = p.ProductID
@@ -63,12 +68,14 @@ public class SKUItemServiceImpl implements SKUItemService {
         List<SKUItem> items = jdbcTemplate.query(sql, (rs, rowNum) -> new SKUItem(
             rs.getInt("ItemID"),
             rs.getInt("ProductID"),
+            rs.getString("ProductCode"),
             rs.getString("SKU"),
             rs.getInt("Quantity"),
             rs.getString("Status"),
     
             rs.getString("Name"),
             rs.getString("PhotoURL"),
+            rs.getString("UnitName"),
             rs.getString("Origin"),
             rs.getLong("WholesalePrice"),
             rs.getLong("RetailPrice"),
@@ -83,7 +90,10 @@ public class SKUItemServiceImpl implements SKUItemService {
             rs.getInt("LocationID"),
             rs.getString("LocationName"),
     
-            rs.getDate("ExpirationDate")        
+            rs.getDate("ExpirationDate"),
+            
+            rs.getInt("ReceiptLineItemID"),
+            rs.getString("LotNumber")
         ));
     
         return items.toArray(SKUItem[]::new);
@@ -98,9 +108,11 @@ public class SKUItemServiceImpl implements SKUItemService {
                 s.SKU,
                 s.Quantity,
                 s.Status,
-    
+
+                p.ProductCode,
                 p.Name,
                 p.PhotoURL,
+                p.UnitName,
                 p.Origin,
                 p.WholesalePrice,
                 p.RetailPrice,
@@ -115,7 +127,9 @@ public class SKUItemServiceImpl implements SKUItemService {
                 l.LocationID,
                 l.LocationName AS LocationName,
     
-                r.ExpirationDate
+                r.ExpirationDate,
+                r.ReceiptLineItemID,
+                r.LotNumber
     
             FROM SKUItem s
             JOIN Product p ON s.ProductID = p.ProductID
@@ -131,12 +145,14 @@ public class SKUItemServiceImpl implements SKUItemService {
         List<SKUItem> items = jdbcTemplate.query(sql, (rs, rowNum) -> new SKUItem(
             rs.getInt("ItemID"),
             rs.getInt("ProductID"),
+            rs.getString("ProductCode"),
             rs.getString("SKU"),
             rs.getInt("Quantity"),
             rs.getString("Status"),
     
             rs.getString("Name"),
             rs.getString("PhotoURL"),
+            rs.getString("UnitName"),
             rs.getString("Origin"),
             rs.getLong("WholesalePrice"),
             rs.getLong("RetailPrice"),
@@ -151,7 +167,9 @@ public class SKUItemServiceImpl implements SKUItemService {
             rs.getInt("LocationID"),
             rs.getString("LocationName"),
     
-            rs.getDate("ExpirationDate")        
+            rs.getDate("ExpirationDate"),
+            rs.getInt("ReceiptLineItemID"),
+            rs.getString("LotNumber")        
         ), productID);
         return items.toArray(SKUItem[]::new);
     }
@@ -165,8 +183,10 @@ public class SKUItemServiceImpl implements SKUItemService {
                 s.SKU,
                 s.Quantity,
                 s.Status,
+                p.ProductCode,
                 p.Name,
                 p.PhotoURL,
+                p.UnitName,
                 p.Origin,
                 p.WholesalePrice,
                 p.RetailPrice,
@@ -193,12 +213,14 @@ public class SKUItemServiceImpl implements SKUItemService {
         return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> new SKUItem(
                 rs.getInt("ItemID"),
                 rs.getInt("ProductID"),
+                rs.getString("ProductCode"),
                 rs.getString("SKU"),
                 rs.getInt("Quantity"),
                 rs.getString("Status"),
 
                 rs.getString("Name"),
                 rs.getString("PhotoURL"),
+                rs.getString("UnitName"),
                 rs.getString("Origin"),
                 rs.getLong("WholesalePrice"),
                 rs.getLong("RetailPrice"),
@@ -213,7 +235,9 @@ public class SKUItemServiceImpl implements SKUItemService {
                 rs.getInt("LocationID"),
                 rs.getString("LocationName"),
 
-                rs.getDate("ExpirationDate")
+                rs.getDate("ExpirationDate"),
+                rs.getInt("ReceiptLineItemID"),
+                rs.getString("LotNumber")
         ), itemID);
     }
 
