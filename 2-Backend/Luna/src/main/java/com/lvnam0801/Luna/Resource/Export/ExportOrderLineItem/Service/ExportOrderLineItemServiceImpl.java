@@ -34,23 +34,31 @@ public class ExportOrderLineItemServiceImpl implements ExportOrderLineItemServic
     @Override
     public ExportOrderLineItem[] getByOrderID(Integer orderID) {
         String sql = """
-            SELECT e.*, 
-                p.Name,
+            SELECT e.*,
+                w.Name AS WarehouseName,
+                eh.OrderNumber AS OrderNumber, 
+                p.Name AS ProductName,
                 u1.FullName AS CreatedByName, 
                 u2.FullName AS UpdatedByName 
             FROM ExportOrderLineItem e
+            LEFT JOIN Warehouse w ON e.WarehouseID = w.WarehouseID
+            LEFT JOIN ExportOrderHeader eh ON e.OrderID = eh.OrderID
             LEFT JOIN Product p ON e.ProductID = p.ProductID
             LEFT JOIN User u1 ON e.CreatedBy = u1.UserID
             LEFT JOIN User u2 ON e.UpdatedBy = u2.UserID
             WHERE e.OrderID = ?
         """;
 
-        List<ExportOrderLineItem> items = jdbcTemplate.query(sql, new Object[]{orderID}, (rs, rowNum) -> new ExportOrderLineItem(
+        List<ExportOrderLineItem> items = jdbcTemplate.query(sql, (rs, rowNum) -> new ExportOrderLineItem(
             rs.getInt("OrderLineItemID"),
+            rs.getInt("WarehouseID"),
+            rs.getString("WarehouseName"),
             rs.getInt("OrderID"),
+            rs.getString("OrderNumber"),
             rs.getInt("ProductID"),
-            rs.getString("Name"),
+            rs.getString("ProductName"),
             rs.getString("LineItemNumber"),
+            rs.getString("SKU"),
             rs.getInt("ExportedQuantity"),
             rs.getString("LotNumber"),
             rs.getDate("ExpirationDate"),
@@ -62,30 +70,39 @@ public class ExportOrderLineItemServiceImpl implements ExportOrderLineItemServic
             rs.getInt("UpdatedBy"),
             rs.getString("UpdatedByName"),
             rs.getTimestamp("UpdatedAt")
-        ));
+        ),
+        new Object[]{orderID});
         return items.toArray(new ExportOrderLineItem[0]);
     }
 
     @Override
     public ExportOrderLineItem getByID(Integer orderLineItemID) {
         String sql = """
-            SELECT e.*, 
+            SELECT e.*,
+                w.Name AS WarehouseName,
+                eh.OrderNumber AS OrderNumber,  
                 p.Name,
                 u1.FullName AS CreatedByName, 
                 u2.FullName AS UpdatedByName 
             FROM ExportOrderLineItem e
+            LEFT JOIN Warehouse w ON e.WarehouseID = w.WarehouseID
+            LEFT JOIN ExportOrderHeader eh ON e.OrderID = eh.OrderID
             LEFT JOIN Product p ON e.ProductID = p.ProductID
             LEFT JOIN User u1 ON e.CreatedBy = u1.UserID
             LEFT JOIN User u2 ON e.UpdatedBy = u2.UserID
             WHERE e.OrderLineItemID = ?
         """;
 
-        ExportOrderLineItem item = jdbcTemplate.queryForObject(sql, new Object[]{orderLineItemID}, (rs, rowNum) -> new ExportOrderLineItem(
+        ExportOrderLineItem item = jdbcTemplate.queryForObject(sql, (rs, rowNum) -> new ExportOrderLineItem(
             rs.getInt("OrderLineItemID"),
+            rs.getInt("WarehouseID"),
+            rs.getString("WarehouseName"),
             rs.getInt("OrderID"),
+            rs.getString("OrderNumber"),
             rs.getInt("ProductID"),
             rs.getString("Name"),
             rs.getString("LineItemNumber"),
+            rs.getString("SKU"),
             rs.getInt("ExportedQuantity"),
             rs.getString("LotNumber"),
             rs.getDate("ExpirationDate"),
@@ -97,7 +114,8 @@ public class ExportOrderLineItemServiceImpl implements ExportOrderLineItemServic
             rs.getInt("UpdatedBy"),
             rs.getString("UpdatedByName"),
             rs.getTimestamp("UpdatedAt")
-        ));
+        ),
+        new Object[]{orderLineItemID});
         if (item == null) {
             throw new NoSuchElementException("No line item found with ID: " + orderLineItemID);
         }
@@ -112,15 +130,17 @@ public class ExportOrderLineItemServiceImpl implements ExportOrderLineItemServic
     
         String sql = """
             INSERT INTO ExportOrderLineItem (
-                OrderID, ProductID, LineItemNumber, ExportedQuantity, LotNumber,
+                WarehouseID, OrderID, ProductID, LineItemNumber, SKU, ExportedQuantity, LotNumber,
                 ExpirationDate, UnitPrice, Status, CreatedBy, UpdatedBy
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
     
         jdbcTemplate.update(sql,
+            request.warehouseID(),
             request.orderID(),
             request.productID(),
             lineItemNumber,
+            request.SKU(),
             request.exportedQuantity(),
             request.lotNumber(),
             request.expirationDate(),
@@ -195,8 +215,9 @@ public class ExportOrderLineItemServiceImpl implements ExportOrderLineItemServic
         if (orderID == null) {
             throw new NoSuchElementException("Order ID not found for the given line item ID.");
         }
-        String lineItemNumber = getOrderLineNumberByID(lineItemID);
-        String content = "Cập nhật dòng xuất kho " + lineItemNumber;
+        // String lineItemNumber = getOrderLineNumberByID(lineItemID);
+        ExportOrderLineItem exportOrderLineItem = getByID(lineItemID);
+        String content = "Cập nhật trạng thái lô hàng " + exportOrderLineItem.lotNumber();
         // Log activity
         exportActivityLogService.log(new ExportActivityLogRequest(
             orderID,
@@ -212,6 +233,6 @@ public class ExportOrderLineItemServiceImpl implements ExportOrderLineItemServic
 
     private String getOrderLineNumberByID(Integer lineItemID) {
         String sql = "SELECT LineItemNumber FROM ExportOrderLineItem WHERE OrderLineItemID = ?";
-        return jdbcTemplate.queryForObject(sql, new Object[]{lineItemID}, String.class);
+        return jdbcTemplate.queryForObject(sql, String.class, new Object[]{lineItemID});
     }
 }

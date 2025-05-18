@@ -23,7 +23,7 @@ public class SKUItemServiceImpl implements SKUItemService {
     }
 
     @Override
-    public SKUItem[] getAllSKUItems() {
+    public SKUItem[] getSKUItems() {
         String sql = """
             SELECT
                 s.ItemID,
@@ -45,24 +45,25 @@ public class SKUItemServiceImpl implements SKUItemService {
                 c.Name AS CategoryName,
                 m.Name AS ManufacturerName,
     
-                w.WarehouseID,
+                s.WarehouseID,
                 w.Name AS WarehouseName,
-                l.LocationID,
+                s.LocationID,
                 l.LocationName AS LocationName,
     
+                s.ReceiptLineItemID,
                 r.ExpirationDate,
-                r.ReceiptLineItemID,
                 r.LotNumber
 
     
             FROM SKUItem s
             JOIN Product p ON s.ProductID = p.ProductID
+            
             LEFT JOIN ProductCategory c ON p.CategoryID = c.CategoryID
             LEFT JOIN Manufacturer m ON p.ManufacturerID = m.ManufacturerID
-            LEFT JOIN Putaway pu ON pu.SKUItemID = s.ItemID
-            LEFT JOIN Location l ON pu.PutawayAtLocationID = l.LocationID
-            LEFT JOIN Warehouse w ON l.WarehouseID = w.WarehouseID
-            LEFT JOIN ImportReceiptLineItem r ON pu.ReceiptLineItemID = r.ReceiptLineItemID
+
+            LEFT JOIN Warehouse w ON s.WarehouseID = w.WarehouseID
+            LEFT JOIN Location l ON s.LocationID = l.LocationID
+            LEFT JOIN ImportReceiptLineItem r ON s.ReceiptLineItemID = r.ReceiptLineItemID
         """;
     
         List<SKUItem> items = jdbcTemplate.query(sql, (rs, rowNum) -> new SKUItem(
@@ -90,14 +91,175 @@ public class SKUItemServiceImpl implements SKUItemService {
             rs.getInt("LocationID"),
             rs.getString("LocationName"),
     
-            rs.getDate("ExpirationDate"),
-            
             rs.getInt("ReceiptLineItemID"),
+            rs.getDate("ExpirationDate"),
             rs.getString("LotNumber")
         ));
     
         return items.toArray(SKUItem[]::new);
     }
+
+    @Override
+    public SKUItem[] getSKUItems(Integer warehouseID) {
+        String sql = """
+            SELECT
+                s.ItemID,
+                s.ProductID,
+                s.SKU,
+                s.Quantity,
+                s.Status,
+
+                p.ProductCode,
+                p.Name,
+                p.PhotoURL,
+                p.UnitName,
+                p.Origin,
+                p.WholesalePrice,
+                p.RetailPrice,
+                p.CategoryID,
+                p.ManufacturerID,
+    
+                c.Name AS CategoryName,
+                m.Name AS ManufacturerName,
+    
+                s.WarehouseID,
+                w.Name AS WarehouseName,
+                s.LocationID,
+                l.LocationName AS LocationName,
+    
+                s.ReceiptLineItemID,
+                r.ExpirationDate,
+                r.LotNumber
+
+    
+            FROM SKUItem s
+            JOIN Product p ON s.ProductID = p.ProductID
+            
+            LEFT JOIN ProductCategory c ON p.CategoryID = c.CategoryID
+            LEFT JOIN Manufacturer m ON p.ManufacturerID = m.ManufacturerID
+
+            LEFT JOIN Warehouse w ON s.WarehouseID = w.WarehouseID
+            LEFT JOIN Location l ON s.LocationID = l.LocationID
+            LEFT JOIN ImportReceiptLineItem r ON s.ReceiptLineItemID = r.ReceiptLineItemID
+            WHERE s.WarehouseID = ?
+        """;
+    
+        List<SKUItem> items = jdbcTemplate.query(sql, (rs, rowNum) -> new SKUItem(
+                rs.getInt("ItemID"),
+                rs.getInt("ProductID"),
+                rs.getString("ProductCode"),
+                rs.getString("SKU"),
+                rs.getInt("Quantity"),
+                rs.getString("Status"),
+        
+                rs.getString("Name"),
+                rs.getString("PhotoURL"),
+                rs.getString("UnitName"),
+                rs.getString("Origin"),
+                rs.getLong("WholesalePrice"),
+                rs.getLong("RetailPrice"),
+        
+                rs.getInt("CategoryID"),
+                rs.getString("CategoryName"),
+                rs.getInt("ManufacturerID"),
+                rs.getString("ManufacturerName"),
+        
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
+                rs.getInt("LocationID"),
+                rs.getString("LocationName"),
+        
+                rs.getInt("ReceiptLineItemID"),
+                rs.getDate("ExpirationDate"),
+                rs.getString("LotNumber")
+            ),
+            new Object[]{warehouseID}
+        );
+    
+        return items.toArray(SKUItem[]::new);
+    }
+
+    @Override
+    public SKUItem[] getSKUItems(Integer warehouseID, String SKU) {
+        String sql = """
+            SELECT
+                s.ItemID,
+                s.ProductID,
+                s.SKU,
+                s.Quantity,
+                s.Status,
+
+                p.ProductCode,
+                p.Name,
+                p.PhotoURL,
+                p.UnitName,
+                p.Origin,
+                p.WholesalePrice,
+                p.RetailPrice,
+                p.CategoryID,
+                p.ManufacturerID,
+    
+                c.Name AS CategoryName,
+                m.Name AS ManufacturerName,
+    
+                s.WarehouseID,
+                w.Name AS WarehouseName,
+                s.LocationID,
+                l.LocationName AS LocationName,
+    
+                s.ReceiptLineItemID,
+                r.ExpirationDate,
+                r.LotNumber
+
+    
+            FROM SKUItem s
+            JOIN Product p ON s.ProductID = p.ProductID
+            
+            LEFT JOIN ProductCategory c ON p.CategoryID = c.CategoryID
+            LEFT JOIN Manufacturer m ON p.ManufacturerID = m.ManufacturerID
+
+            LEFT JOIN Warehouse w ON s.WarehouseID = w.WarehouseID
+            LEFT JOIN Location l ON s.LocationID = l.LocationID
+            LEFT JOIN ImportReceiptLineItem r ON s.ReceiptLineItemID = r.ReceiptLineItemID
+            WHERE s.WarehouseID = ? AND s.SKU = ?
+        """;
+    
+        List<SKUItem> items = jdbcTemplate.query(sql, (rs, rowNum) -> new SKUItem(
+                rs.getInt("ItemID"),
+                rs.getInt("ProductID"),
+                rs.getString("ProductCode"),
+                rs.getString("SKU"),
+                rs.getInt("Quantity"),
+                rs.getString("Status"),
+        
+                rs.getString("Name"),
+                rs.getString("PhotoURL"),
+                rs.getString("UnitName"),
+                rs.getString("Origin"),
+                rs.getLong("WholesalePrice"),
+                rs.getLong("RetailPrice"),
+        
+                rs.getInt("CategoryID"),
+                rs.getString("CategoryName"),
+                rs.getInt("ManufacturerID"),
+                rs.getString("ManufacturerName"),
+        
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
+                rs.getInt("LocationID"),
+                rs.getString("LocationName"),
+        
+                rs.getInt("ReceiptLineItemID"),
+                rs.getDate("ExpirationDate"),
+                rs.getString("LotNumber")
+            ),
+            new Object[]{warehouseID, SKU}
+        );
+    
+        return items.toArray(SKUItem[]::new);
+    }
+
+
     @Override
     public SKUItem[] getSKUItemsByProductID(Integer productID)
     {
@@ -122,23 +284,22 @@ public class SKUItemServiceImpl implements SKUItemService {
                 c.Name AS CategoryName,
                 m.Name AS ManufacturerName,
     
-                w.WarehouseID,
+                s.WarehouseID,
                 w.Name AS WarehouseName,
-                l.LocationID,
+                s.LocationID,
                 l.LocationName AS LocationName,
     
+                s.ReceiptLineItemID,
                 r.ExpirationDate,
-                r.ReceiptLineItemID,
                 r.LotNumber
     
             FROM SKUItem s
             JOIN Product p ON s.ProductID = p.ProductID
             LEFT JOIN ProductCategory c ON p.CategoryID = c.CategoryID
             LEFT JOIN Manufacturer m ON p.ManufacturerID = m.ManufacturerID
-            LEFT JOIN Putaway pu ON pu.SKUItemID = s.ItemID
-            LEFT JOIN Location l ON pu.PutawayAtLocationID = l.LocationID
-            LEFT JOIN Warehouse w ON l.WarehouseID = w.WarehouseID
-            LEFT JOIN ImportReceiptLineItem r ON pu.ReceiptLineItemID = r.ReceiptLineItemID
+            LEFT JOIN Warehouse w ON s.WarehouseID = w.WarehouseID
+            LEFT JOIN Location l ON s.LocationID = l.LocationID
+            LEFT JOIN ImportReceiptLineItem r ON s.ReceiptLineItemID = r.ReceiptLineItemID
             WHERE s.ProductID = ?
         """;
     
@@ -167,8 +328,8 @@ public class SKUItemServiceImpl implements SKUItemService {
             rs.getInt("LocationID"),
             rs.getString("LocationName"),
     
-            rs.getDate("ExpirationDate"),
             rs.getInt("ReceiptLineItemID"),
+            rs.getDate("ExpirationDate"),
             rs.getString("LotNumber")        
         ), productID);
         return items.toArray(SKUItem[]::new);
@@ -183,6 +344,7 @@ public class SKUItemServiceImpl implements SKUItemService {
                 s.SKU,
                 s.Quantity,
                 s.Status,
+
                 p.ProductCode,
                 p.Name,
                 p.PhotoURL,
@@ -192,21 +354,25 @@ public class SKUItemServiceImpl implements SKUItemService {
                 p.RetailPrice,
                 p.CategoryID,
                 p.ManufacturerID,
+    
                 c.Name AS CategoryName,
                 m.Name AS ManufacturerName,
-                w.WarehouseID,
+    
+                s.WarehouseID,
                 w.Name AS WarehouseName,
-                l.LocationID,
-                l.LocationName,
-                r.ExpirationDate
+                s.LocationID,
+                l.LocationName AS LocationName,
+    
+                s.ReceiptLineItemID,
+                r.ExpirationDate,
+                r.LotNumber
             FROM SKUItem s
             JOIN Product p ON s.ProductID = p.ProductID
             LEFT JOIN ProductCategory c ON p.CategoryID = c.CategoryID
             LEFT JOIN Manufacturer m ON p.ManufacturerID = m.ManufacturerID
-            LEFT JOIN Putaway pu ON pu.SKUItemID = s.ItemID
-            LEFT JOIN Location l ON pu.PutawayAtLocationID = l.LocationID
-            LEFT JOIN Warehouse w ON l.WarehouseID = w.WarehouseID
-            LEFT JOIN ImportReceiptLineItem r ON pu.ReceiptLineItemID = r.ReceiptLineItemID
+            LEFT JOIN Warehouse w ON s.WarehouseID = w.WarehouseID
+            LEFT JOIN Location l ON s.LocationID = l.LocationID
+            LEFT JOIN ImportReceiptLineItem r ON s.ReceiptLineItemID = r.ReceiptLineItemID
             WHERE s.ItemID = ?
             """;
 
@@ -235,8 +401,8 @@ public class SKUItemServiceImpl implements SKUItemService {
                 rs.getInt("LocationID"),
                 rs.getString("LocationName"),
 
-                rs.getDate("ExpirationDate"),
                 rs.getInt("ReceiptLineItemID"),
+                rs.getDate("ExpirationDate"),
                 rs.getString("LotNumber")
         ), itemID);
     }

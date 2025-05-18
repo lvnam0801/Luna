@@ -7,12 +7,19 @@ import java.sql.Timestamp;
 // Representation class
 public record ExportOrderLineItem(
     Integer orderLineItemID,
+
+    Integer warehouseID,
+    String warehouseName,
+
     Integer orderID,
+    String orderNumber,
 
     Integer productID,
     String productName,
 
     String lineItemNumber,
+    
+    String SKU,
     Integer exportedQuantity,
     String lotNumber,
     Date expirationDate,

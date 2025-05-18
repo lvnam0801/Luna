@@ -45,6 +45,8 @@ public class ShipmentServiceImpl implements ShipmentService {
                 s.ShipmentID, s.ShipmentNumber,
                 s.OrderID, o.OrderNumber,
                 s.CarrierID, c.ContactName AS CarrierName,
+                s.WarehouseID,
+                w.Name AS WarehouseName,
                 s.ShipFromLocationID, l.LocationName AS ShipFromLocationName,
                 s.ShipToAddressID,
                 a.StreetAddress, a.City, a.StateProvince, a.PostalCode, a.Country,
@@ -55,6 +57,7 @@ public class ShipmentServiceImpl implements ShipmentService {
             FROM Shipment s
             JOIN ExportOrderHeader o ON s.OrderID = o.OrderID
             LEFT JOIN Party c ON s.CarrierID = c.PartyID
+            LEFT JOIN Warehouse w ON s.WarehouseID = w.WarehouseID
             LEFT JOIN Location l ON s.ShipFromLocationID = l.LocationID
             LEFT JOIN Address a ON s.ShipToAddressID = a.AddressID
             LEFT JOIN User cu ON s.CreatedBy = cu.UserID
@@ -63,7 +66,7 @@ public class ShipmentServiceImpl implements ShipmentService {
             ORDER BY s.ShipmentID
         """;
 
-        List<Shipment> results = jdbcTemplate.query(sql, new Object[]{orderID}, (rs, rowNum) ->
+        List<Shipment> results = jdbcTemplate.query(sql, (rs, rowNum) ->
             new Shipment(
                 rs.getInt("ShipmentID"),
                 rs.getString("ShipmentNumber"),
@@ -73,6 +76,9 @@ public class ShipmentServiceImpl implements ShipmentService {
 
                 rs.getInt("CarrierID"),
                 rs.getString("CarrierName"),
+
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
 
                 rs.getInt("ShipFromLocationID"),
                 rs.getString("ShipFromLocationName"),
@@ -104,7 +110,8 @@ public class ShipmentServiceImpl implements ShipmentService {
                 rs.getTimestamp("UpdatedAt"),
 
                 getShipmentPackings(rs.getInt("ShipmentID")) // 🧩 <- inject nested packing
-            )
+            ),
+            new Object[]{orderID}
         );
 
         return results.toArray(new Shipment[0]);
@@ -112,34 +119,49 @@ public class ShipmentServiceImpl implements ShipmentService {
 
     @Override
     public Shipment getByID(Integer shipmentID) {
-        String sql = """
-            SELECT s.*, 
-                   o.OrderNumber, 
-                   c.ContactName AS CarrierName,
-                   l.LocationName AS ShipFromLocationName,
-                   a.StreetAddress, a.City, a.StateProvince, a.PostalCode, a.Country,
-                   cu1.FullName AS CreatedByName,
-                   cu2.FullName AS UpdatedByName
+         String sql = """
+            SELECT 
+                s.ShipmentID, s.ShipmentNumber,
+                s.OrderID, o.OrderNumber,
+                s.CarrierID, c.ContactName AS CarrierName,
+                s.WarehouseID,
+                w.Name AS WarehouseName,
+                s.ShipFromLocationID, l.LocationName AS ShipFromLocationName,
+                s.ShipToAddressID,
+                a.StreetAddress, a.City, a.StateProvince, a.PostalCode, a.Country,
+                s.ShippedDate, s.ExpectedArrivalDate, s.ActualArrivalDate,
+                s.ShipmentStatus, s.Notes, s.Status,
+                s.CreatedBy, cu.FullName AS CreatedByName,
+                s.CreatedAt, s.UpdatedBy, uu.FullName AS UpdatedByName, s.UpdatedAt
             FROM Shipment s
             JOIN ExportOrderHeader o ON s.OrderID = o.OrderID
             LEFT JOIN Party c ON s.CarrierID = c.PartyID
+            LEFT JOIN Warehouse w ON s.WarehouseID = w.WarehouseID
             LEFT JOIN Location l ON s.ShipFromLocationID = l.LocationID
             LEFT JOIN Address a ON s.ShipToAddressID = a.AddressID
-            LEFT JOIN User cu1 ON s.CreatedBy = cu1.UserID
-            LEFT JOIN User cu2 ON s.UpdatedBy = cu2.UserID
+            LEFT JOIN User cu ON s.CreatedBy = cu.UserID
+            LEFT JOIN User uu ON s.UpdatedBy = uu.UserID
             WHERE s.ShipmentID = ?
+            ORDER BY s.ShipmentID
         """;
 
-        Shipment shipment = jdbcTemplate.queryForObject(sql, new Object[]{shipmentID}, (ResultSet rs, int rowNum) ->
+        Shipment shipment = jdbcTemplate.queryForObject(sql, (rs, rowNum) ->
             new Shipment(
                 rs.getInt("ShipmentID"),
                 rs.getString("ShipmentNumber"),
+
                 rs.getInt("OrderID"),
                 rs.getString("OrderNumber"),
+
                 rs.getInt("CarrierID"),
                 rs.getString("CarrierName"),
+
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
+
                 rs.getInt("ShipFromLocationID"),
                 rs.getString("ShipFromLocationName"),
+
                 rs.getInt("ShipToAddressID"),
                 new Address(
                     rs.getInt("ShipToAddressID"),
@@ -149,24 +171,28 @@ public class ShipmentServiceImpl implements ShipmentService {
                     rs.getString("PostalCode"),
                     rs.getString("Country")
                 ),
+
                 rs.getDate("ShippedDate"),
                 rs.getDate("ExpectedArrivalDate"),
                 rs.getDate("ActualArrivalDate"),
+
                 rs.getString("ShipmentStatus"),
                 rs.getString("Notes"),
                 rs.getString("Status"),
+
                 rs.getInt("CreatedBy"),
                 rs.getString("CreatedByName"),
                 rs.getTimestamp("CreatedAt"),
+
                 rs.getInt("UpdatedBy"),
                 rs.getString("UpdatedByName"),
                 rs.getTimestamp("UpdatedAt"),
+
                 getShipmentPackings(rs.getInt("ShipmentID")) // 🧩 <- inject nested packing
-            )
+            ),
+            new Object[]{shipmentID}
         );
-        if (shipment == null) {
-            throw new RuntimeException("Shipment not found with ID: " + shipmentID);
-        }
+
         return shipment;
     }
 
@@ -193,16 +219,17 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         String sql = """
             INSERT INTO Shipment (
-                ShipmentNumber, OrderID, CarrierID, ShipFromLocationID, ShipToAddressID,
+                ShipmentNumber, OrderID, CarrierID, WarehouseID, ShipFromLocationID, ShipToAddressID,
                 ShippedDate, ExpectedArrivalDate, ActualArrivalDate, ShipmentStatus, Notes, Status,
                 CreatedBy, UpdatedBy
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         jdbcTemplate.update(sql,
             request.shipmentNumber(),
             request.orderID(),
             request.carrierID(),
+            request.warehouseID(),
             request.shipFromLocationID(),
             request.shipToAddressID(),
             request.shippedDate(),

@@ -399,7 +399,8 @@ public class PutawayServiceImpl implements PutawayService{
         // Step 8: Return response
         return new PutawayCreateResponse(
             id,
-            "Putaway created successfully."
+            "Putaway created successfully.",
+            skuItemID
         );
     }
 

@@ -23,6 +23,7 @@ public record ExportOrderHeader(
     Integer shippingAddressID,
     Address shippingAddress,
 
+    String exportPurpose,
     Date orderDate,
     Date requestedDeliveryDate,
     String shippingMethod,

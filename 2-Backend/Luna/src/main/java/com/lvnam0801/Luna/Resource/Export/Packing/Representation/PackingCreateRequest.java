@@ -6,6 +6,7 @@ public record PackingCreateRequest(
     String packingNumber,
     Integer orderID,
     Integer orderLineItemID,
+    Integer warehouseID,
     Integer packToLocationID,
     String status,
     Date packedDate

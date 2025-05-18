@@ -15,6 +15,7 @@ public record ExportOrderHeaderCreateRequest(
     // From Address table
     Integer shippingAddressID,
 
+    String exportPurpose,
     Date orderDate,
     Date requestedDeliveryDate,
     String shippingMethod,

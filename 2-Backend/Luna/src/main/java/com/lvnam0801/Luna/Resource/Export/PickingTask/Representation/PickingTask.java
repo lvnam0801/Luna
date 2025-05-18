@@ -6,11 +6,19 @@ import java.sql.Timestamp;
 public record PickingTask(
     Integer pickingTaskID,
     String pickingNumber,
+    
+    Integer orderID,
+    String orderNumber,
+
     Integer orderLineItemID,
+    String lotNumber,
 
     Integer skuItemID,
     String sku,
     Integer pickedQuantity,
+    
+    Integer warehouseID,
+    String warehouseName,
 
     Integer pickFromLocationID,
     String pickFromLocationName,

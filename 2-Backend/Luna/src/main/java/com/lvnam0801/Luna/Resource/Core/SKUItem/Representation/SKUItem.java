@@ -34,9 +34,9 @@ public record SKUItem(
     String locationName,
     
     // From Import Receipt Line Item table get from Putaway
-    Date expirationDate,
-    
-    // Join table Receipt Line Item
     Integer receiptLineItemID,
+    Date expirationDate,
     String lotNumber
+    // Join table Receipt Line Item
+    
 ) {}

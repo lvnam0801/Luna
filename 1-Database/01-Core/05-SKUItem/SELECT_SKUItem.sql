@@ -1,4 +1,1 @@
--- SHOW INDEX FROM SKUItem
--- WHERE Non_unique = 0 AND Key_name != 'PRIMARY';
-
-ALTER TABLE SKUItem DROP INDEX SKU;
+SELECT * FROM SKUItem;

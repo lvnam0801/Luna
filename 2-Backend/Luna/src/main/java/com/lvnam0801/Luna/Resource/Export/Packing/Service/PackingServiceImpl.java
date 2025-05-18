@@ -15,6 +15,8 @@ import com.lvnam0801.Luna.Resource.Export.ExportActivityLog.Representation.Expor
 import com.lvnam0801.Luna.Resource.Export.ExportActivityLog.Representation.ExportActivityLogRequest;
 import com.lvnam0801.Luna.Resource.Export.ExportActivityLog.Representation.ExportActivityTargetType;
 import com.lvnam0801.Luna.Resource.Export.ExportActivityLog.Service.ExportActivityLogService;
+import com.lvnam0801.Luna.Resource.Export.ExportOrderLineItem.Representation.ExportOrderLineItem;
+import com.lvnam0801.Luna.Resource.Export.ExportOrderLineItem.Service.ExportOrderLineItemService;
 import com.lvnam0801.Luna.Resource.Export.Packing.Representation.Packing;
 import com.lvnam0801.Luna.Resource.Export.Packing.Representation.PackingCreateRequest;
 import com.lvnam0801.Luna.Resource.Export.Packing.Representation.PackingCreateResponse;
@@ -29,11 +31,13 @@ public class PackingServiceImpl implements PackingService {
 
     private final JdbcTemplate jdbcTemplate;
     private final UserContext userContext;
+    private final ExportOrderLineItemService exportOrderLineItemService;
     private final ExportActivityLogService activityLogService;
 
-    public PackingServiceImpl(JdbcTemplate jdbcTemplate, UserContext userContext, ExportActivityLogService activityLogService) {
+    public PackingServiceImpl(JdbcTemplate jdbcTemplate, UserContext userContext, ExportOrderLineItemService exportOrderLineItemService, ExportActivityLogService activityLogService) {
         this.jdbcTemplate = jdbcTemplate;
         this.userContext = userContext;
+        this.exportOrderLineItemService = exportOrderLineItemService;
         this.activityLogService = activityLogService;
     }
 
@@ -41,7 +45,10 @@ public class PackingServiceImpl implements PackingService {
     public Packing[] getByOrderID(Integer orderID) {
         String sql = """
             SELECT 
-                p.*, 
+                p.*,
+                eh.OrderNumber AS OrderNumber,
+                el.LotNumber AS LotNumber,
+                w.Name AS WarehouseName, 
                 l.LocationName AS PackToLocationName,
                 u1.FullName AS CreatedByName,
                 u2.FullName AS UpdatedByName,
@@ -52,7 +59,10 @@ public class PackingServiceImpl implements PackingService {
                 pr.Name AS ProductName,
                 pd.PackedQuantity
             FROM Packing p
-            JOIN Location l ON p.PackToLocationID = l.LocationID
+            LEFT JOIN ExportOrderHeader eh ON p.OrderID = eh.OrderID
+            LEFT JOIN ExportOrderLineItem el ON p.OrderLineItemID = el.OrderLineItemID
+            LEFT JOIN Warehouse w ON p.WarehouseID = w.WarehouseID
+            LEFT JOIN Location l ON p.PackToLocationID = l.LocationID
             LEFT JOIN User u1 ON p.CreatedBy = u1.UserID
             LEFT JOIN User u2 ON p.UpdatedBy = u2.UserID
             LEFT JOIN User u3 ON p.PackedBy = u3.UserID
@@ -63,10 +73,9 @@ public class PackingServiceImpl implements PackingService {
             ORDER BY p.PackingID
         """;
 
-        List<Packing> result = new ArrayList<>();
         Map<Integer, Packing> packingMap = new LinkedHashMap<>();
 
-        jdbcTemplate.query(sql, new Object[]{orderID}, rs -> {
+        jdbcTemplate.query(sql, rs -> {
             Integer packingID = rs.getInt("PackingID");
 
             // Only create Packing object if not already present
@@ -74,7 +83,11 @@ public class PackingServiceImpl implements PackingService {
                 packingID,
                 rs.getString("PackingNumber"),
                 rs.getInt("OrderID"),
+                rs.getString("OrderNumber"),
                 rs.getInt("OrderLineItemID"),
+                rs.getString("LotNumber"),
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
                 rs.getInt("PackToLocationID"),
                 rs.getString("PackToLocationName"),
                 rs.getString("Status"),
@@ -102,7 +115,9 @@ public class PackingServiceImpl implements PackingService {
                     rs.getInt("PackedQuantity")
                 ));
             }
-        });
+            }, 
+            new Object[]{orderID}
+        );
 
         return packingMap.values().toArray(new Packing[0]);
     }
@@ -112,7 +127,10 @@ public class PackingServiceImpl implements PackingService {
     {
         String sql = """
             SELECT 
-                p.*, 
+                p.*,
+                eh.OrderNumber AS OrderNumber,
+                el.LotNumber AS LotNumber,
+                w.Name AS WarehouseName, 
                 l.LocationName AS PackToLocationName,
                 u1.FullName AS CreatedByName,
                 u2.FullName AS UpdatedByName,
@@ -123,7 +141,10 @@ public class PackingServiceImpl implements PackingService {
                 pr.Name AS ProductName,
                 pd.PackedQuantity
             FROM Packing p
-            JOIN Location l ON p.PackToLocationID = l.LocationID
+            LEFT JOIN ExportOrderHeader eh ON p.OrderID = eh.OrderID
+            LEFT JOIN ExportOrderLineItem el ON p.OrderLineItemID = el.OrderLineItemID
+            LEFT JOIN Warehouse w ON p.WarehouseID = w.WarehouseID
+            LEFT JOIN Location l ON p.PackToLocationID = l.LocationID
             LEFT JOIN User u1 ON p.CreatedBy = u1.UserID
             LEFT JOIN User u2 ON p.UpdatedBy = u2.UserID
             LEFT JOIN User u3 ON p.PackedBy = u3.UserID
@@ -134,10 +155,9 @@ public class PackingServiceImpl implements PackingService {
             ORDER BY p.PackingID
         """;
 
-        List<Packing> result = new ArrayList<>();
         Map<Integer, Packing> packingMap = new LinkedHashMap<>();
 
-        jdbcTemplate.query(sql, new Object[]{orderLineItemID}, rs -> {
+        jdbcTemplate.query(sql, rs -> {
             Integer packingID = rs.getInt("PackingID");
 
             // Only create Packing object if not already present
@@ -145,7 +165,11 @@ public class PackingServiceImpl implements PackingService {
                 packingID,
                 rs.getString("PackingNumber"),
                 rs.getInt("OrderID"),
+                rs.getString("OrderNumber"),
                 rs.getInt("OrderLineItemID"),
+                rs.getString("LotNumber"),
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
                 rs.getInt("PackToLocationID"),
                 rs.getString("PackToLocationName"),
                 rs.getString("Status"),
@@ -173,7 +197,9 @@ public class PackingServiceImpl implements PackingService {
                     rs.getInt("PackedQuantity")
                 ));
             }
-        });
+            }, 
+            new Object[]{orderLineItemID}
+        );
 
         return packingMap.values().toArray(new Packing[0]);
     }
@@ -186,11 +212,18 @@ public class PackingServiceImpl implements PackingService {
 
     private Packing getPackingByIDInternal(Integer packingID) {
         String sql = """
-            SELECT p.*, l.LocationName AS PackToLocationName,
-                   u1.FullName AS CreatedByName,
-                   u2.FullName AS UpdatedByName,
-                   u3.FullName AS PackedByName
+            SELECT p.*, 
+                    eh.OrderNumber AS OrderNumber,
+                    el.LotNumber AS LotNumber,
+                    w.Name AS WarehouseName,  
+                    l.LocationName AS PackToLocationName,
+                    u1.FullName AS CreatedByName,
+                    u2.FullName AS UpdatedByName,
+                    u3.FullName AS PackedByName
             FROM Packing p
+            LEFT JOIN ExportOrderHeader eh ON p.OrderID = eh.OrderID
+            LEFT JOIN ExportOrderLineItem el ON p.OrderLineItemID = el.OrderLineItemID
+            LEFT JOIN Warehouse w ON p.WarehouseID = w.WarehouseID
             JOIN Location l ON p.PackToLocationID = l.LocationID
             LEFT JOIN User u1 ON p.CreatedBy = u1.UserID
             LEFT JOIN User u2 ON p.UpdatedBy = u2.UserID
@@ -213,7 +246,6 @@ public class PackingServiceImpl implements PackingService {
 
         List<PackingDetail> skuItems = jdbcTemplate.query(
             detailSql,
-            new Object[]{packingID},
             (rs, rowNum) -> new PackingDetail(
                 rs.getInt("PackingDetailID"),
                 rs.getInt("PackingID"),
@@ -221,14 +253,19 @@ public class PackingServiceImpl implements PackingService {
                 rs.getString("SKU"),
                 rs.getString("ProductName"),
                 rs.getInt("PackedQuantity")
-            )
+            ),
+            new Object[]{packingID}
         );
 
-        return jdbcTemplate.queryForObject(sql, new Object[]{packingID}, (rs, rowNum) -> new Packing(
+        return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> new Packing(
                 rs.getInt("PackingID"),
                 rs.getString("PackingNumber"),
                 rs.getInt("OrderID"),
+                rs.getString("OrderNumber"),
                 rs.getInt("OrderLineItemID"),
+                rs.getString("LotNumber"),
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
                 rs.getInt("PackToLocationID"),
                 rs.getString("PackToLocationName"),
                 rs.getString("Status"),
@@ -242,21 +279,35 @@ public class PackingServiceImpl implements PackingService {
                 rs.getString("UpdatedByName"),
                 rs.getTimestamp("UpdatedAt"),
                 skuItems
-        ));
+            ),
+            new Object[]{packingID}
+        );
     }
 
     @Override
     public PackingCreateResponse createPacking(PackingCreateRequest request) {
         Integer userID = userContext.getCurrentUserID();
         String sql = """
-            INSERT INTO Packing (PackingNumber, OrderID, OrderLineItemID, PackToLocationID, Status, PackedBy, PackedDate, CreatedBy, UpdatedBy)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO Packing (
+                PackingNumber, 
+                OrderID, 
+                OrderLineItemID,
+                WarehouseID, 
+                PackToLocationID, 
+                Status, 
+                PackedBy, 
+                PackedDate, 
+                CreatedBy, 
+                UpdatedBy
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         jdbcTemplate.update(sql,
                 request.packingNumber(),
                 request.orderID(),
                 request.orderLineItemID(),
+                request.warehouseID(),
                 request.packToLocationID(),
                 request.status(),
                 userID,
@@ -266,14 +317,19 @@ public class PackingServiceImpl implements PackingService {
         );
 
         Integer packingID = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Integer.class);
-
+        ExportOrderLineItem exportOrderLineItem = exportOrderLineItemService.getByID(request.orderLineItemID());
+        if(exportOrderLineItem == null)
+        {
+            throw new IllegalArgumentException("The export order line item not found: " + request.orderLineItemID());
+        }
+        
         activityLogService.log(new ExportActivityLogRequest(
                 request.orderID(),
                 userID,
                 ExportActivityTargetType.PACKING.value(),
                 ExportActivityActionType.CREATE.value(),
                 packingID,
-                "Tạo packing  " + request.packingNumber()
+                "Tạo bản ghi đóng gói  " + request.packingNumber() + " trên lô hàng " + exportOrderLineItem.lotNumber()
         ));
 
         return new PackingCreateResponse(packingID, "Packing created successfully.");
@@ -311,7 +367,7 @@ public class PackingServiceImpl implements PackingService {
                 ExportActivityTargetType.PACKING.value(),
                 ExportActivityActionType.UPDATE.value(),
                 packingID,
-                "Cập nhật packing " + getPackingNumberByID(packingID)
+                "Cập nhật bản ghi đóng gói " + getPackingNumberByID(packingID)
         ));
 
         return new PackingUpdateResponse(packingID, "Packing updated successfully.");
@@ -380,6 +436,9 @@ public class PackingServiceImpl implements PackingService {
         String sql = """
             SELECT
                 p.*,
+                eh.OrderNumber AS OrderNumber,
+                el.LotNumber AS LotNumber,
+                w.Name AS WarehouseName,  
                 l.LocationName AS PackToLocationName,
                 u1.FullName AS CreatedByName,
                 u2.FullName AS UpdatedByName,
@@ -390,6 +449,9 @@ public class PackingServiceImpl implements PackingService {
                 pr.Name AS ProductName,
                 pd.PackedQuantity
             FROM Packing p
+            LEFT JOIN ExportOrderHeader eh ON p.OrderID = eh.OrderID
+            LEFT JOIN ExportOrderLineItem el ON p.OrderLineItemID = el.OrderLineItemID
+            LEFT JOIN Warehouse w ON p.WarehouseID = w.WarehouseID
             JOIN Location l ON p.PackToLocationID = l.LocationID
             LEFT JOIN User u1 ON p.CreatedBy = u1.UserID
             LEFT JOIN User u2 ON p.UpdatedBy = u2.UserID
@@ -417,7 +479,11 @@ public class PackingServiceImpl implements PackingService {
                     packingID,
                     rs.getString("PackingNumber"),
                     rs.getInt("OrderID"),
+                    rs.getString("OrderNumber"),
                     rs.getInt("OrderLineItemID"),
+                    rs.getString("LotNumber"),
+                    rs.getInt("WarehouseID"),
+                    rs.getString("WarehouseName"),
                     rs.getInt("PackToLocationID"),
                     rs.getString("PackToLocationName"),
                     rs.getString("Status"),

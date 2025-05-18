@@ -6,6 +6,7 @@ public record ShipmentCreateRequest(
     String shipmentNumber,
     Integer orderID,
     Integer carrierID,
+    Integer warehouseID,
     Integer shipFromLocationID,
     Integer shipToAddressID,
     Date shippedDate,

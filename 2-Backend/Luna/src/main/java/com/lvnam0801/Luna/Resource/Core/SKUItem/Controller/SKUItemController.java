@@ -20,9 +20,39 @@ public class SKUItemController {
     }
 
     @GetMapping("/get-all")
-    public ResponseEntity<SKUItem[]> getAllSKUItems() {
-        SKUItem[] items = skuItemService.getAllSKUItems();
-        return ResponseEntity.ok(items);
+    public ResponseEntity<?> getAllSKUItems() {
+        try {
+            SKUItem[] items = skuItemService.getSKUItems();
+            return ResponseEntity.ok(items);
+        }catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to fetch SKU items: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/get-by-warehouse")
+    public ResponseEntity<?> getSKUItemsByWarehouse(
+        @RequestParam("warehouseID") Integer warehouseID) {
+        try {
+            SKUItem[] items = skuItemService.getSKUItems(warehouseID);
+            return ResponseEntity.ok(items);
+        }catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to fetch SKU items: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/get-by-warehouse-and-sku")
+    public ResponseEntity<?> getSKUItemsByWarehouseAndSKU(
+        @RequestParam("warehouseID") Integer warehouseID,
+        @RequestParam("sku") String sku){
+        try {
+            SKUItem[] items = skuItemService.getSKUItems(warehouseID, sku);
+            return ResponseEntity.ok(items);
+        }catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to fetch SKU items: " + e.getMessage());
+        }
     }
 
     @GetMapping("/get-by-product/{productID}")

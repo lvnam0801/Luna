@@ -8,9 +8,17 @@ public record Packing(
     Integer packingID,
     String packingNumber,
     Integer orderID,
+    String orderNumber,
+    
     Integer orderLineItemID,
+    String lotNumber,
+
+    Integer warehouseID,
+    String warehouseName,
+
     Integer packToLocationID,
     String packToLocationName,
+    
     String status,
     Integer packedBy,
     String packedByName,

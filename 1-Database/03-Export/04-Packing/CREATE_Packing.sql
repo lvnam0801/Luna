@@ -21,9 +21,3 @@
 --     FOREIGN KEY (CreatedBy) REFERENCES User(UserID) ON DELETE SET NULL,
 --     FOREIGN KEY (UpdatedBy) REFERENCES User(UserID) ON DELETE SET NULL
 -- );
-
--- ALTER TABLE Packing
---     ADD WarehouseID INT AFTER OrderID;
-
--- ALTER TABLE Packing
---     ADD FOREIGN KEY (WarehouseID) REFERENCES Warehouse(WarehouseID);

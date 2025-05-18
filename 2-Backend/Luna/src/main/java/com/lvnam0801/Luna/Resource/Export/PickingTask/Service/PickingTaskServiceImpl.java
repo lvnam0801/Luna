@@ -10,6 +10,8 @@ import com.lvnam0801.Luna.Resource.Export.ExportActivityLog.Representation.Expor
 import com.lvnam0801.Luna.Resource.Export.ExportActivityLog.Representation.ExportActivityLogRequest;
 import com.lvnam0801.Luna.Resource.Export.ExportActivityLog.Representation.ExportActivityTargetType;
 import com.lvnam0801.Luna.Resource.Export.ExportActivityLog.Service.ExportActivityLogService;
+import com.lvnam0801.Luna.Resource.Export.ExportOrderLineItem.Representation.ExportOrderLineItem;
+import com.lvnam0801.Luna.Resource.Export.ExportOrderLineItem.Service.ExportOrderLineItemService;
 import com.lvnam0801.Luna.Resource.Export.PickingTask.Representation.PickingTask;
 import com.lvnam0801.Luna.Resource.Export.PickingTask.Representation.PickingTaskCreateRequest;
 import com.lvnam0801.Luna.Resource.Export.PickingTask.Representation.PickingTaskCreateResponse;
@@ -25,43 +27,59 @@ public class PickingTaskServiceImpl implements PickingTaskService {
     private final JdbcTemplate jdbcTemplate;
     private final SKUItemService skuItemService;
     private final UserContext userContext;
+    private final ExportOrderLineItemService exportOrderLineItemService;
     private final ExportActivityLogService activityLogService;
 
     public PickingTaskServiceImpl(
             JdbcTemplate jdbcTemplate,
             SKUItemService skuItemService,
             UserContext userContext,
+            ExportOrderLineItemService exportOrderLineItemService,
             ExportActivityLogService activityLogService
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.skuItemService = skuItemService;
         this.userContext = userContext;
+        this.exportOrderLineItemService = exportOrderLineItemService;
         this.activityLogService = activityLogService;
     }
 
     @Override
     public PickingTask[] getByOrderLineItemID(Integer orderLineItemID) {
         String sql = """
-            SELECT pt.*, s.SKU, l.LocationName AS PickFromLocationName,
-                   u1.FullName AS CreatedByName,
-                   u2.FullName AS UpdatedByName,
-                   u3.FullName AS PickedByName
+            SELECT pt.*,
+                    eh.OrderNumber AS OrderNumber,
+                    el.LotNumber AS LotNumber,
+                    s.SKU,
+                    w.Name AS WarehouseName,
+                    l.LocationName AS PickFromLocationName,
+                    u1.FullName AS CreatedByName,
+                    u2.FullName AS UpdatedByName,
+                    u3.FullName AS PickedByName
             FROM PickingTask pt
-            JOIN SKUItem s ON pt.SKUItemID = s.ItemID
-            JOIN Location l ON pt.PickFromLocationID = l.LocationID
+            LEFT JOIN ExportOrderHeader eh ON pt.OrderID = eh.OrderID
+            LEFT JOIN ExportOrderLineItem el ON pt.OrderLineItemID = el.OrderLineItemID
+            LEFT JOIN SKUItem s ON pt.SKUItemID = s.ItemID
+            LEFT JOIN Warehouse w ON pt.WarehouseID = w.WarehouseID
+            LEFT JOIN Location l ON pt.PickFromLocationID = l.LocationID
             LEFT JOIN User u1 ON pt.CreatedBy = u1.UserID
             LEFT JOIN User u2 ON pt.UpdatedBy = u2.UserID
             LEFT JOIN User u3 ON pt.PickedBy = u3.UserID
             WHERE pt.OrderLineItemID = ?
         """;
 
-        List<PickingTask> tasks = jdbcTemplate.query(sql, new Object[]{orderLineItemID}, (rs, rowNum) -> new PickingTask(
+        List<PickingTask> tasks = jdbcTemplate.query(sql, (rs, rowNum) -> new PickingTask(
                 rs.getInt("PickingTaskID"),
                 rs.getString("PickingNumber"),
+                rs.getInt("OrderID"),
+                rs.getString("OrderNumber"),
                 rs.getInt("OrderLineItemID"),
+                rs.getString("LotNumber"),
                 rs.getInt("SKUItemID"),
                 rs.getString("SKU"),
                 rs.getInt("PickedQuantity"),
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
                 rs.getInt("PickFromLocationID"),
                 rs.getString("PickFromLocationName"),
                 rs.getString("Status"),
@@ -74,7 +92,9 @@ public class PickingTaskServiceImpl implements PickingTaskService {
                 rs.getInt("UpdatedBy"),
                 rs.getString("UpdatedByName"),
                 rs.getTimestamp("UpdatedAt")
-        ));
+            ),
+            new Object[]{orderLineItemID}
+        );
 
         return tasks.toArray(new PickingTask[0]);
     }
@@ -86,26 +106,39 @@ public class PickingTaskServiceImpl implements PickingTaskService {
 
     private PickingTask getByPickingTaskID(Integer id) {
         String sql = """
-            SELECT pt.*, s.SKU, l.LocationName AS PickFromLocationName,
-                   u1.FullName AS CreatedByName,
-                   u2.FullName AS UpdatedByName,
-                   u3.FullName AS PickedByName
+            SELECT pt.*,
+                    eh.OrderNumber AS OrderNumber,
+                    el.LotNumber AS LotNumber,
+                    s.SKU,
+                    w.Name AS WarehouseName,
+                    l.LocationName AS PickFromLocationName,
+                    u1.FullName AS CreatedByName,
+                    u2.FullName AS UpdatedByName,
+                    u3.FullName AS PickedByName
             FROM PickingTask pt
-            JOIN SKUItem s ON pt.SKUItemID = s.ItemID
-            JOIN Location l ON pt.PickFromLocationID = l.LocationID
+            LEFT JOIN ExportOrderHeader eh ON pt.OrderID = eh.OrderID
+            LEFT JOIN ExportOrderLineItem el ON pt.OrderLineItemID = el.OrderLineItemID
+            LEFT JOIN SKUItem s ON pt.SKUItemID = s.ItemID
+            LEFT JOIN Warehouse w ON pt.WarehouseID = w.WarehouseID
+            LEFT JOIN Location l ON pt.PickFromLocationID = l.LocationID
             LEFT JOIN User u1 ON pt.CreatedBy = u1.UserID
             LEFT JOIN User u2 ON pt.UpdatedBy = u2.UserID
             LEFT JOIN User u3 ON pt.PickedBy = u3.UserID
             WHERE pt.PickingTaskID = ?
         """;
 
-        return jdbcTemplate.queryForObject(sql, new Object[]{id}, (rs, rowNum) -> new PickingTask(
+        PickingTask pickingTask = jdbcTemplate.queryForObject(sql, (rs, rowNum) -> new PickingTask(
                 rs.getInt("PickingTaskID"),
                 rs.getString("PickingNumber"),
+                rs.getInt("OrderID"),
+                rs.getString("OrderNumber"),
                 rs.getInt("OrderLineItemID"),
+                rs.getString("LotNumber"),
                 rs.getInt("SKUItemID"),
                 rs.getString("SKU"),
                 rs.getInt("PickedQuantity"),
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
                 rs.getInt("PickFromLocationID"),
                 rs.getString("PickFromLocationName"),
                 rs.getString("Status"),
@@ -118,7 +151,9 @@ public class PickingTaskServiceImpl implements PickingTaskService {
                 rs.getInt("UpdatedBy"),
                 rs.getString("UpdatedByName"),
                 rs.getTimestamp("UpdatedAt")
-        ));
+        ), new Object[]{id});
+
+        return pickingTask;
     }
 
     @Override
@@ -135,20 +170,30 @@ public class PickingTaskServiceImpl implements PickingTaskService {
         // Step 2: Insert picking task
         String sql = """
             INSERT INTO PickingTask (
-                PickingNumber, OrderLineItemID, SKUItemID,
-                PickedQuantity, PickFromLocationID,
-                Status, PickedBy, PickedDate,
-                CreatedBy, UpdatedBy
+                PickingNumber,
+                OrderID, 
+                OrderLineItemID, 
+                SKUItemID,
+                PickedQuantity, 
+                WarehouseID,
+                PickFromLocationID,
+                Status, 
+                PickedBy, 
+                PickedDate,
+                CreatedBy, 
+                UpdatedBy
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         jdbcTemplate.update(
             sql,
             request.pickingNumber(),
+            request.orderID(),
             request.orderLineItemID(),
             request.skuItemID(),
             request.pickedQuantity(),
+            request.warehouseID(),
             request.pickFromLocationID(),
             request.status(),
             userID,
@@ -160,16 +205,24 @@ public class PickingTaskServiceImpl implements PickingTaskService {
         // Step 3: Get new ID
         Integer id = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Integer.class);
         if (id == null)
+        {
             throw new IllegalStateException("Could not retrieve new PickingTask ID");
-
+        }
+        
+        ExportOrderLineItem exportOrderLineItem = exportOrderLineItemService.getByID(request.orderLineItemID());
+        if (exportOrderLineItem == null)
+        {
+            throw new IllegalStateException("Could not find the export order line item: " + request.orderLineItemID());
+        }
+        
         // Step 4: Log activity
         activityLogService.log(new ExportActivityLogRequest(
-            getOrderIDFromPickingTaskID(id),
+            exportOrderLineItem.orderID(),
             userID,
             ExportActivityTargetType.PICKING_TASK.value(),
             ExportActivityActionType.CREATE.value(),
             id,
-            "Tạo picking task cho dòng xuất kho " + request.pickingNumber()
+            "Tạo nhiệm vụ lấy hàng " + request.pickingNumber() + " cho lô hàng " + exportOrderLineItem.lotNumber()
         ));
 
         return new PickingTaskCreateResponse(id, "Picking Task created successfully.");
@@ -231,7 +284,7 @@ public class PickingTaskServiceImpl implements PickingTaskService {
             ExportActivityTargetType.PICKING_TASK.value(),
             ExportActivityActionType.UPDATE.value(),
             pickingTaskID,
-            "Cập nhật picking task " + pickingNumber
+            "Cập nhật nhiệm vụ lấy hàng " + pickingNumber
         ));
 
         return new PickingTaskUpdateResponse(pickingTaskID, "Picking Task updated successfully.");
@@ -243,12 +296,12 @@ public class PickingTaskServiceImpl implements PickingTaskService {
             FROM PickingTask pt
             JOIN ExportOrderLineItem el ON pt.OrderLineItemID = el.OrderLineItemID
             WHERE pt.PickingTaskID = ?
-        """, new Object[]{taskID}, Integer.class);
+        """, Integer.class, new Object[]{taskID});
     }
 
     private String getPickingNumberByID(Integer taskID) {
         return jdbcTemplate.queryForObject("SELECT PickingNumber FROM PickingTask WHERE PickingTaskID = ?",
-                new Object[]{taskID}, String.class);
+                String.class, new Object[]{taskID});
     }
 
     private void rollbackSKUQuantityOnCancel(Integer pickingTaskID, PickingTask originalTask, Integer userID) {

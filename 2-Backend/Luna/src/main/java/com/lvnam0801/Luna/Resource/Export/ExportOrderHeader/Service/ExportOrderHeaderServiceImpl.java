@@ -54,7 +54,8 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
                 a.StateProvince,
                 a.PostalCode,
                 a.Country,
-    
+
+                o.ExportPurpose,
                 o.OrderDate,
                 o.RequestedDeliveryDate,
                 o.ShippingMethod,
@@ -102,7 +103,8 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
                     rs.getString("PostalCode"),
                     rs.getString("Country")
                 ),
-    
+
+                rs.getString("ExportPurpose"),
                 rs.getDate("OrderDate"),
                 rs.getDate("RequestedDeliveryDate"),
                 rs.getString("ShippingMethod"),
@@ -146,6 +148,7 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
                 a.PostalCode,
                 a.Country,
                 
+                o.ExportPurpose,
                 o.OrderDate,
                 o.RequestedDeliveryDate,
                 o.ShippingMethod,
@@ -193,7 +196,7 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
                         rs.getString("PostalCode"),
                         rs.getString("Country")
                     ),
-                    
+                    rs.getString("ExportPurpose"),
                     rs.getDate("OrderDate"),
                     rs.getDate("RequestedDeliveryDate"),
                     rs.getString("ShippingMethod"),
@@ -229,6 +232,7 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
                 CarrierID,
                 WarehouseID,
                 ShippingAddressID,
+                ExportPurpose,
                 OrderDate,
                 RequestedDeliveryDate,
                 ShippingMethod,
@@ -240,7 +244,7 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
                 CreatedAt,
                 UpdatedBy,
                 UpdatedAt
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         jdbcTemplate.update(
@@ -250,6 +254,7 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
             request.carrierID(),
             request.warehouseID(),
             request.shippingAddressID(),
+            request.exportPurpose(),
             request.orderDate(),
             request.requestedDeliveryDate(),
             request.shippingMethod(),
@@ -376,6 +381,7 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
                 a.StateProvince,
                 a.PostalCode,
                 a.Country,
+                o.ExportPurpose,
                 o.OrderDate,
                 o.RequestedDeliveryDate,
                 o.ShippingMethod,
@@ -421,6 +427,7 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
                     rs.getString("PostalCode"),
                     rs.getString("Country")
                 ),
+                rs.getString("ExportPurpose"),
                 rs.getDate("OrderDate"),
                 rs.getDate("RequestedDeliveryDate"),
                 rs.getString("ShippingMethod"),

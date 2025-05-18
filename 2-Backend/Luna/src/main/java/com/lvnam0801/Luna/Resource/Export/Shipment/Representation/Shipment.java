@@ -16,6 +16,9 @@ public record Shipment(
     Integer carrierID,
     String carrierName,
 
+    Integer warehouseID,
+    String warehouseName,
+
     Integer shipFromLocationID,
     String shipFromLocationName,
 
