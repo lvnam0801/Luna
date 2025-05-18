@@ -1,3 +1,4 @@
-SELECT COUNT(DISTINCT s.ProductID)
-            FROM SKUItem s
-            WHERE s.Status = 'in_stock' AND s.Quantity > 0
+-- SHOW INDEX FROM SKUItem
+-- WHERE Non_unique = 0 AND Key_name != 'PRIMARY';
+
+ALTER TABLE SKUItem DROP INDEX SKU;

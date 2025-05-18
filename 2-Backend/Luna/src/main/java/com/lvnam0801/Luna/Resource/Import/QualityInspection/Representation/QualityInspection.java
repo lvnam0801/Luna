@@ -6,11 +6,19 @@ import java.sql.Timestamp;
 public record QualityInspection(
     Integer inspectionID,
     String inspectionNumber,
+
+    Integer receiptID,
+    String ReceiptNumber,
+    
     Integer receiptLineItemID,
+    String LotNumber,
     
     Integer inspectedBy,
     String inspectedByName, // Get from user table
     Date inspectionDate,
+
+    Integer warehouseID,
+    String warehouseName,
     
     Integer inspectedLocationID,
     String inspectedLocationName, // Get from location table

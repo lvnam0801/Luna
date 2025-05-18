@@ -1,6 +1,7 @@
 -- DROP TABLE IF EXISTS QualityInspection;
 -- CREATE TABLE QualityInspection (
 --     InspectionID INT AUTO_INCREMENT PRIMARY KEY,                        -- Unique identifier for this inspection
+--     ReceiptID INT,
 --     ReceiptLineItemID INT NOT NULL,                                     -- The line item being inspected
 --     InspectionNumber VARCHAR(100) NOT NULL UNIQUE,                             -- Unique identifier for the inspection
 --     InspectedBy INT,                                                    -- User who performed the inspection
@@ -18,7 +19,7 @@
 --     CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 --     UpdatedBy INT,
 --     UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
+--     FOREIGN KEY (ReceiptID) REFERENCES ImportReceiptHeader(ReceiptID) ON DELETE SET NULL,
 --     FOREIGN KEY (ReceiptLineItemID) REFERENCES ImportReceiptLineItem(ReceiptLineItemID) ON DELETE CASCADE,
 --     FOREIGN KEY (WarehouseID) REFERENCES Warehouse(WarehouseID) ON DELETE CASCADE,
 --     FOREIGN KEY (InspectedBy) REFERENCES User(UserID) ON DELETE SET NULL,
@@ -27,8 +28,22 @@
 --     FOREIGN KEY (UpdatedBy) REFERENCES User(UserID) ON DELETE SET NULL
 -- );
 
--- ALTER TABLE QualityInspection 
---     ADD WarehouseID INT AFTER InspectionDate;
-
 -- ALTER TABLE QualityInspection
---     ADD FOREIGN KEY (WarehouseID) REFERENCES Warehouse(WarehouseID);
+--     ADD ReceiptID INT AFTER InspectionID,
+--     ADD FOREIGN KEY (ReceiptID) REFERENCES ImportReceiptHeader(ReceiptID);
+
+-- UPDATE QualityInspection
+--     SET ReceiptID = 1;
+
+-- SELECT
+--     kcu.CONSTRAINT_NAME,
+--     kcu.TABLE_NAME,
+--     kcu.COLUMN_NAME,
+--     kcu.REFERENCED_TABLE_NAME,
+--     kcu.REFERENCED_COLUMN_NAME
+-- FROM
+--     information_schema.KEY_COLUMN_USAGE kcu
+-- WHERE
+--     kcu.TABLE_SCHEMA = 'LunaWMS'
+--     AND kcu.TABLE_NAME = 'QualityInspection'
+--     AND kcu.REFERENCED_TABLE_NAME IS NOT NULL;

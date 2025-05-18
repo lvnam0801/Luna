@@ -14,6 +14,7 @@ import com.lvnam0801.Luna.Resource.Core.SKUItem.Service.SKUItemService;
 import com.lvnam0801.Luna.Resource.Core.User.Context.UserContext;
 import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Representation.ImportActivityActionType;
 import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Representation.ImportActivityTargetType;
+import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Representation.ImportReceiptLineItem;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Service.ImportReceiptLineItemService;
 import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Service.ImportActivityLogService;
 import com.lvnam0801.Luna.Resource.Import.Putaway.Representation.Putaway;
@@ -46,7 +47,12 @@ public class PutawayServiceImpl implements PutawayService{
             SELECT 
                 p.PutawayID,
                 p.PutawayNumber,
+                p.ReceiptID,
+                ih.ReceiptNumber AS ReceiptNumber,
                 p.ReceiptLineItemID,
+                il.LotNumber AS LotNumber,
+                p.WarehouseID,
+                w.Name AS WarehouseName,
                 p.PutawayAtLocationID,
                 loc.LocationName AS PutawayAtLocationName,
                 p.SKUItemID,
@@ -64,6 +70,9 @@ public class PutawayServiceImpl implements PutawayService{
                 u3.FullName AS UpdatedByName,
                 p.UpdatedAt
             FROM Putaway p
+            LEFT JOIN ImportReceiptHeader ih ON p.ReceiptID = ih.ReceiptID
+            LEFT JOIN ImportReceiptLineItem il ON p.ReceiptLineItemID = il.ReceiptLineItemID
+            LEFT JOIN Warehouse w ON p.WarehouseID = w.WarehouseID
             LEFT JOIN Location loc ON p.PutawayAtLocationID = loc.LocationID
             LEFT JOIN SKUItem s ON p.SKUItemID = s.ItemID
             LEFT JOIN User u1 ON p.PutawayBy = u1.UserID
@@ -74,11 +83,15 @@ public class PutawayServiceImpl implements PutawayService{
 
         return jdbcTemplate.query(
             sql,
-            new Object[]{receiptLineItemID},
             (rs, rowNum) -> new Putaway(
                 rs.getInt("PutawayID"),
                 rs.getString("PutawayNumber"),
+                rs.getInt("ReceiptID"),
+                rs.getString("ReceiptNumber"),
                 rs.getInt("ReceiptLineItemID"),
+                rs.getString("LotNumber"),
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
                 rs.getInt("PutawayAtLocationID"),
                 rs.getString("PutawayAtLocationName"),
                 rs.getInt("SKUItemID"),
@@ -95,7 +108,8 @@ public class PutawayServiceImpl implements PutawayService{
                 rs.getInt("UpdatedBy"),
                 rs.getString("UpdatedByName"),
                 rs.getTimestamp("UpdatedAt")
-            )
+            ),
+            new Object[]{receiptLineItemID}
         ).toArray(Putaway[]::new);
     }
 
@@ -105,7 +119,12 @@ public class PutawayServiceImpl implements PutawayService{
             SELECT
                 p.PutawayID,
                 p.PutawayNumber,
+                p.ReceiptID,
+                ih.ReceiptNumber AS ReceiptNumber,
                 p.ReceiptLineItemID,
+                il.LotNumber AS LotNumber,
+                p.WarehouseID,
+                w.Name AS WarehouseName,
                 p.PutawayAtLocationID,
                 loc.LocationName AS PutawayAtLocationName,
                 p.SKUItemID,
@@ -123,6 +142,9 @@ public class PutawayServiceImpl implements PutawayService{
                 CONCAT(u3.FirstName, ' ', u3.LastName) AS UpdatedByName,
                 p.UpdatedAt
             FROM Putaway p
+            LEFT JOIN ImportReceiptHeader ih ON p.ReceiptID = ih.ReceiptID
+            LEFT JOIN ImportReceiptLineItem il ON p.ReceiptLineItemID = il.ReceiptLineItemID
+            LEFT JOIN Warehouse w ON p.WarehouseID = w.WarehouseID
             LEFT JOIN Location loc ON p.PutawayAtLocationID = loc.LocationID
             LEFT JOIN SKUItem sku ON p.SKUItemID = sku.ItemID
             LEFT JOIN User u1 ON p.PutawayBy = u1.UserID
@@ -133,11 +155,15 @@ public class PutawayServiceImpl implements PutawayService{
     
         return jdbcTemplate.queryForObject(
             sql,
-            new Object[]{putawayID},
             (rs, rowNum) -> new Putaway(
                 rs.getInt("PutawayID"),
                 rs.getString("PutawayNumber"),
+                rs.getInt("ReceiptID"),
+                rs.getString("ReceiptNumber"),
                 rs.getInt("ReceiptLineItemID"),
+                rs.getString("LotNumber"),
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
                 rs.getInt("PutawayAtLocationID"),
                 rs.getString("PutawayAtLocationName"),
                 rs.getInt("SKUItemID"),
@@ -154,7 +180,8 @@ public class PutawayServiceImpl implements PutawayService{
                 rs.getInt("UpdatedBy"),
                 rs.getString("UpdatedByName"),
                 rs.getTimestamp("UpdatedAt")
-            )
+            ),
+            new Object[]{putawayID}
         );
     }
 
@@ -165,7 +192,12 @@ public class PutawayServiceImpl implements PutawayService{
             SELECT
                 p.PutawayID,
                 p.PutawayNumber,
+                p.ReceiptID,
+                ih.ReceiptNumber AS ReceiptNumber,
                 p.ReceiptLineItemID,
+                il.LotNumber AS LotNumber,
+                p.WarehouseID,
+                w.Name AS WarehouseName,
                 p.PutawayAtLocationID,
                 loc.LocationName AS PutawayAtLocationName,
                 p.SKUItemID,
@@ -183,6 +215,11 @@ public class PutawayServiceImpl implements PutawayService{
                 CONCAT(u3.FirstName, ' ', u3.LastName) AS UpdatedByName,
                 p.UpdatedAt
             FROM Putaway p
+            
+            LEFT JOIN ImportReceiptHeader ih ON p.ReceiptID = ih.ReceiptID
+            LEFT JOIN ImportReceiptLineItem il ON p.ReceiptLineItemID = il.ReceiptLineItemID
+            LEFT JOIN Warehouse w ON p.WarehouseID = w.WarehouseID
+            
             LEFT JOIN Location loc ON p.PutawayAtLocationID = loc.LocationID
             LEFT JOIN SKUItem sku ON p.SKUItemID = sku.ItemID
             LEFT JOIN User u1 ON p.PutawayBy = u1.UserID
@@ -193,11 +230,15 @@ public class PutawayServiceImpl implements PutawayService{
     
         return jdbcTemplate.queryForObject(
             sql,
-            new Object[]{skuItemID},
             (rs, rowNum) -> new Putaway(
                 rs.getInt("PutawayID"),
                 rs.getString("PutawayNumber"),
+                rs.getInt("ReceiptID"),
+                rs.getString("ReceiptNumber"),
                 rs.getInt("ReceiptLineItemID"),
+                rs.getString("LotNumber"),
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
                 rs.getInt("PutawayAtLocationID"),
                 rs.getString("PutawayAtLocationName"),
                 rs.getInt("SKUItemID"),
@@ -214,7 +255,8 @@ public class PutawayServiceImpl implements PutawayService{
                 rs.getInt("UpdatedBy"),
                 rs.getString("UpdatedByName"),
                 rs.getTimestamp("UpdatedAt")
-            )
+            ),
+            new Object[]{skuItemID}
         );
     }
 
@@ -296,7 +338,13 @@ public class PutawayServiceImpl implements PutawayService{
         Integer skuItemID = null;
         if ("completed".equalsIgnoreCase(request.status()))
         {
-            skuItemID = createSKUItemFromPutaway(request.putawayResult(), request.receiptLineItemID(), request.quantity());
+            skuItemID = createSKUItemFromPutaway(
+                request.quantity(), 
+                request.receiptLineItemID(), 
+                request.warehouseID(), 
+                request.putawayAtLocationID(), 
+                request.putawayResult()
+            );
         }
 
         // Step 2: Generate unique PutawayNumber
@@ -305,14 +353,16 @@ public class PutawayServiceImpl implements PutawayService{
         // Step 3: Insert Putaway with new SKUItemID and PutawayNumber
         String sql = """
             INSERT INTO Putaway (
-                PutawayNumber, ReceiptLineItemID, PutawayAtLocationID, SKUItemID, PutawayBy,
+                PutawayNumber, ReceiptID, ReceiptLineItemID, WarehouseID, PutawayAtLocationID, SKUItemID, PutawayBy,
                 Quantity, PutawayResult, Status, PutawayDate, CreatedBy, UpdatedBy
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
         
         jdbcTemplate.update(sql,
             putawayNumber,
+            request.receiptID(),
             request.receiptLineItemID(),
+            request.warehouseID(),
             request.putawayAtLocationID(),
             skuItemID,
             currentUserId,
@@ -331,14 +381,19 @@ public class PutawayServiceImpl implements PutawayService{
         }
 
         // Step 5: Log the activity
-        Integer receiptID = importReceiptLineItemService.getReceiptIDByLineItemID(request.receiptLineItemID());
+        ImportReceiptLineItem importReceiptLineItem = importReceiptLineItemService.getById(request.receiptLineItemID());
+        if(importReceiptLineItem == null)
+        {
+            throw new IllegalArgumentException("Invalid receiptLineItemID. Import Receipt Line Item not found.");
+        }
+
         importActivityLogService.log(
-            receiptID,
+            importReceiptLineItem.receiptID(),
             currentUserId,
             ImportActivityTargetType.PUTAWAY.value(),
             ImportActivityActionType.CREATE.value(),
             id,
-            "Tạo phiếu putaway: " + putawayNumber
+            "Tạo phiếu lưu kho " + putawayNumber + " trên lô hàng " + importReceiptLineItem.lotNumber()
         );
 
         // Step 8: Return response
@@ -348,14 +403,14 @@ public class PutawayServiceImpl implements PutawayService{
         );
     }
 
-    private Integer createSKUItemFromPutaway(String putawayResult, Integer receiptLineItemID, Integer putawayQuantity)
+    private Integer createSKUItemFromPutaway(Integer quantity, Integer receiptLineItemID, Integer warehouseID, Integer locationID, String putawayResult)
     {
         // Step 1: Determine SKUItem status based on PutawayResult
-        String skuItemStatus;
+        String status;
         if ("stored".equalsIgnoreCase(putawayResult)) {
-            skuItemStatus = "in_stock";
+            status = "in_stock";
         } else if ("quarantined".equalsIgnoreCase(putawayResult)) {
-            skuItemStatus = "quarantined";
+            status = "quarantined";
         } else {
             throw new IllegalArgumentException("Invalid putawayResult value.");
         }
@@ -363,23 +418,26 @@ public class PutawayServiceImpl implements PutawayService{
 
         // Step 3: Create SKUItem
         SKUItemCreateRequest skuItemRequest = new SKUItemCreateRequest(
+            quantity,
             productID,
-            putawayQuantity,
-            skuItemStatus
+            receiptLineItemID,
+            warehouseID, 
+            locationID,
+            status
         );
 
         SKUItemCreateResponse createdSKUItem = skuItemService.createSKUItem(skuItemRequest);
-        Integer receiptID = importReceiptLineItemService.getReceiptIDByLineItemID(receiptLineItemID);
+        ImportReceiptLineItem importReceiptLineItem = importReceiptLineItemService.getById(receiptLineItemID);
 
         // Step 4: Log the activity
 
         importActivityLogService.log(
-            receiptID,
+            importReceiptLineItem.receiptID(),
             userContext.getCurrentUserID(),
             ImportActivityTargetType.SKU_ITEM.value(),
             ImportActivityActionType.CREATE.value(),
             createdSKUItem.itemID(),
-            "Tạo SKUItem: " + createdSKUItem.sku() + " với số lượng: " + putawayQuantity
+            "Tạo sản phẩm hàng tồn kho SKU " + createdSKUItem.sku() + " với số lượng " + quantity + " từ lô hàng " + importReceiptLineItem.lotNumber() 
         );
         return createdSKUItem.itemID();
     }
@@ -477,11 +535,15 @@ public class PutawayServiceImpl implements PutawayService{
         String fetchSql = "SELECT * FROM Putaway WHERE PutawayID = ?";
         Putaway existingPutaway = jdbcTemplate.queryForObject(
             fetchSql,
-            new Object[]{putawayID},
             (rs, rowNum) -> new Putaway(
                 rs.getInt("PutawayID"),
                 rs.getString("PutawayNumber"),
+                rs.getInt("ReceiptID"),
+                null,
                 rs.getInt("ReceiptLineItemID"),
+                null,
+                rs.getInt("WarehouseID"),
+                null,
                 rs.getInt("PutawayAtLocationID"),
                 null, // putawayAtLocationName
                 rs.getObject("SKUItemID", Integer.class),
@@ -498,7 +560,8 @@ public class PutawayServiceImpl implements PutawayService{
                 rs.getInt("UpdatedBy"),
                 null, // updatedByName
                 rs.getTimestamp("UpdatedAt")
-            )
+            ),
+            new Object[]{putawayID}
         );
 
         if (existingPutaway == null) {
@@ -538,7 +601,13 @@ public class PutawayServiceImpl implements PutawayService{
         // Step 4: Handle SKUItem creation if status moved to 'completed' and SKUItemID is null
         Integer skuItemID = existingPutaway.skuItemID();
         if ("completed".equalsIgnoreCase(request.status()) && skuItemID == null) {
-            skuItemID = createSKUItemFromPutaway(existingPutaway.putawayResult(), existingPutaway.receiptLineItemID(), existingPutaway.quantity());
+            skuItemID = createSKUItemFromPutaway(
+                existingPutaway.quantity(), 
+                existingPutaway.receiptLineItemID(), 
+                existingPutaway.warehouseID(),
+                existingPutaway.putawayAtLocationID(), 
+                existingPutaway.putawayResult()
+            );
             updates.add("SKUItemID = ?");
             params.add(skuItemID);
         }
@@ -562,14 +631,19 @@ public class PutawayServiceImpl implements PutawayService{
         }
 
         // Step 6: Log the activity
-        Integer receiptID = importReceiptLineItemService.getReceiptIDByLineItemID(existingPutaway.receiptLineItemID());
+        ImportReceiptLineItem importReceiptLineItem = importReceiptLineItemService.getById(existingPutaway.receiptLineItemID());
+        if(importReceiptLineItem == null)
+        {
+            throw new IllegalArgumentException("Invalid receiptLineItemID. Import Receipt Line Item not found.");
+        }
+
         importActivityLogService.log(
-            receiptID,
+            importReceiptLineItem.receiptID(),
             userContext.getCurrentUserID(),
             ImportActivityTargetType.PUTAWAY.value(),
             ImportActivityActionType.UPDATE.value(),
             putawayID,
-            "Cập nhật phiếu putaway: " + existingPutaway.putawayNumber()
+            "Cập nhật phiếu lưu kho " + existingPutaway.putawayNumber() + " trên lô hàng " + importReceiptLineItem.lotNumber()
         );
     
         return new PutawayUpdateResponse(

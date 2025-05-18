@@ -12,6 +12,7 @@ import com.lvnam0801.Luna.Resource.Core.User.Context.UserContext;
 import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Representation.ImportActivityActionType;
 import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Representation.ImportActivityTargetType;
 import com.lvnam0801.Luna.Resource.Import.ImportActivityLog.Service.ImportActivityLogService;
+import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Representation.ImportReceiptLineItem;
 import com.lvnam0801.Luna.Resource.Import.ImportReceiptLineItem.Service.ImportReceiptLineItemService;
 import com.lvnam0801.Luna.Resource.Import.QualityInspection.Representation.QualityInspection;
 import com.lvnam0801.Luna.Resource.Import.QualityInspection.Representation.QualityInspectionCreateRequest;
@@ -41,10 +42,15 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
             SELECT 
                 i.InspectionID,
                 i.InspectionNumber,
+                i.ReceiptID,
+                ih.ReceiptNumber AS ReceiptNumber,
                 i.ReceiptLineItemID,
+                il.LotNumber AS LotNumber,
                 i.InspectedBy,
                 ub.FullName AS InspectedByName,
                 i.InspectionDate,
+                i.WarehouseID,
+                w.Name AS WarehouseName,
                 i.InspectedLocationID,
                 l.LocationName AS InspectedLocationName,
                 i.Quantity,
@@ -58,7 +64,10 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
                 uu.FullName AS UpdatedByName,
                 i.UpdatedAt
             FROM QualityInspection i
+            LEFT JOIN ImportReceiptHeader ih ON i.ReceiptID = ih.ReceiptID
+            LEFT JOIN ImportReceiptLineItem il ON i.ReceiptLineItemID = il.ReceiptLineItemID
             LEFT JOIN User ub ON i.InspectedBy = ub.UserID
+            LEFT JOIN Warehouse w ON i.WarehouseID = w.WarehouseID
             LEFT JOIN Location l ON i.InspectedLocationID = l.LocationID
             LEFT JOIN User uc ON i.CreatedBy = uc.UserID
             LEFT JOIN User uu ON i.UpdatedBy = uu.UserID
@@ -67,14 +76,18 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
 
         List<QualityInspection> inspections = jdbcTemplate.query(
             sql,
-            new Object[]{receiptLineItemID},
             (rs, rowNum) -> new QualityInspection(
                 rs.getInt("InspectionID"),
                 rs.getString("InspectionNumber"),
+                rs.getInt("ReceiptID"),
+                rs.getString("ReceiptNumber"),
                 rs.getInt("ReceiptLineItemID"),
+                rs.getString("LotNumber"),
                 rs.getInt("InspectedBy"),
                 rs.getString("InspectedByName"),
                 rs.getDate("InspectionDate"),
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
                 rs.getInt("InspectedLocationID"),
                 rs.getString("InspectedLocationName"),
                 rs.getInt("Quantity"),
@@ -87,7 +100,8 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
                 rs.getInt("UpdatedBy"),
                 rs.getString("UpdatedByName"),
                 rs.getTimestamp("UpdatedAt")
-            )
+            ),
+            new Object[]{receiptLineItemID}
         );
 
         return inspections.toArray(QualityInspection[]::new);
@@ -97,26 +111,37 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
     public QualityInspection getById(Integer inspectionID) {
         String sql = """
             SELECT 
-                i.*, 
+                i.*,
+                ih.ReceiptNumber AS ReceiptNumber,
+                il.LotNumber AS LotNumber, 
                 cu.FullName AS CreatedByName,
                 uu.FullName AS UpdatedByName,
                 ins.FullName AS InspectedByName,
+                w.Name AS WarehouseName,
                 l.LocationName AS InspectedLocationName
             FROM QualityInspection i
+            LEFT JOIN ImportReceiptHeader ih ON i.ReceiptID = ih.ReceiptID
+            LEFT JOIN ImportReceiptLineItem il ON i.ReceiptLineItemID = il.ReceiptLineItemID
             LEFT JOIN User cu ON i.CreatedBy = cu.UserID
+            LEFT JOIN Warehouse w ON i.WarehouseID = w.WarehouseID
             LEFT JOIN User uu ON i.UpdatedBy = uu.UserID
             LEFT JOIN User ins ON i.InspectedBy = ins.UserID
             LEFT JOIN Location l ON i.InspectedLocationID = l.LocationID
             WHERE i.InspectionID = ?
         """;
 
-        return jdbcTemplate.queryForObject(sql, new Object[]{inspectionID}, (rs, rowNum) -> new QualityInspection(
+        return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> new QualityInspection(
             rs.getInt("InspectionID"),
             rs.getString("InspectionNumber"),
+            rs.getInt("ReceiptID"),
+            rs.getString("ReceiptNumber"),
             rs.getInt("ReceiptLineItemID"),
+            rs.getString("LotNumber"),
             rs.getInt("InspectedBy"),
             rs.getString("InspectedByName"),
             rs.getDate("InspectionDate"),
+            rs.getInt("WarehouseID"),
+            rs.getString("WarehouseName"),
             rs.getInt("InspectedLocationID"),
             rs.getString("InspectedLocationName"),
             rs.getInt("Quantity"),
@@ -129,7 +154,9 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
             rs.getInt("UpdatedBy"),
             rs.getString("UpdatedByName"),
             rs.getTimestamp("UpdatedAt")
-        ));
+            ),
+            new Object[]{inspectionID}
+        );
     }
 
     @Override
@@ -168,20 +195,22 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
         // Step 2: Insert into database
         String sql = """
             INSERT INTO QualityInspection (
-                InspectionNumber, ReceiptLineItemID,
+                InspectionNumber, ReceiptID, ReceiptLineItemID,
                 InspectedBy, InspectionDate,
-                InspectedLocationID, Quantity,
+                WarehouseID, InspectedLocationID, Quantity,
                 InspectionResult, Notes,
                 Status, CreatedBy, UpdatedBy
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         jdbcTemplate.update(
             sql,
             inspectionNumber,
+            inspectionCreateRequest.receiptID(),
             inspectionCreateRequest.receiptLineItemID(),
             currentUserId,
             inspectionCreateRequest.inspectionDate(),
+            inspectionCreateRequest.warehouseID(),
             inspectionCreateRequest.inspectedLocationID(),
             inspectionCreateRequest.quantity(),
             inspectionCreateRequest.inspectionResult(),
@@ -197,16 +226,20 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
             throw new IllegalStateException("Failed to retrieve the last inserted ID.");
         }
         // Step 4: Get ReceiptID for logging
-        Integer receiptID = importReceiptLineItemService.getReceiptIDByLineItemID(inspectionCreateRequest.receiptLineItemID());
+        ImportReceiptLineItem importReceiptLineItem = importReceiptLineItemService.getById(inspectionCreateRequest.receiptLineItemID());
+        if(importReceiptLineItem == null)
+        {
+            throw new IllegalArgumentException("Invalid receiptLineItemID. Import Receipt Line Item not found.");
+        }
 
         // Step 5: Log activity
         importActivityLogService.log(
-            receiptID,
+            importReceiptLineItem.receiptID(),
             currentUserId,
             ImportActivityTargetType.QUALITY_INSPECTION.value(),
             ImportActivityActionType.CREATE.value(),
             id,
-            "Tạo phiếu kiểm tra chất lượng: " + inspectionNumber
+            "Tạo phiếu kiểm tra chất lượng " + inspectionNumber + " " +"trên lô hàng " + importReceiptLineItem.lotNumber()
         );
 
         // Step 6: Return simple response
@@ -323,11 +356,18 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
         }
 
         // Log the update
-        Integer receiptID = getReceiptIDFromInspection(inspectionID);
+        Integer receiptLineItemID = getReceiptLineNumberIDFromInspection(inspectionID);
         String inspectionNumber = getInspectionNumberByID(inspectionID);
-        String logMessage = "Cập nhật phiếu kiểm tra chất lượng " + inspectionNumber;
+        
+        ImportReceiptLineItem importReceiptLineItem = importReceiptLineItemService.getById(receiptLineItemID);
+        if(importReceiptLineItem == null)
+        {
+            throw new IllegalArgumentException("Invalid receiptLineItemID: ProductID not found.");
+        }
+        String logMessage = "Cập nhật phiếu kiểm tra chất lượng " + inspectionNumber + " trên lô hàng " + importReceiptLineItem.lotNumber();
+        
         importActivityLogService.log(
-            receiptID,
+            importReceiptLineItem.receiptID(),
             currentUserID, // you should get current user ID from session later
             ImportActivityTargetType.QUALITY_INSPECTION.value(),
             ImportActivityActionType.UPDATE.value(),
@@ -342,31 +382,14 @@ public class QualityInspectionServiceImpl implements QualityInspectionService{
         );
     }
 
-    /**
-     * Get ReceiptID from InspectionID.
-     * 
-     * Steps:
-     * 1. Find ReceiptLineItemID by InspectionID (QualityInspection table).
-     * 2. Find ReceiptID by ReceiptLineItemID (ImportReceiptLineItem table).
-     */
-    public Integer getReceiptIDFromInspection(Integer inspectionID) {
-        // Step 1: Get ReceiptLineItemID
-        String sql1 = "SELECT ReceiptLineItemID FROM QualityInspection WHERE InspectionID = ?";
-        Integer receiptLineItemID = jdbcTemplate.queryForObject(sql1, Integer.class, inspectionID);
+    public Integer getReceiptLineNumberIDFromInspection(Integer inspectionID) {
+        String sql = "SELECT ReceiptLineItemID FROM QualityInspection WHERE InspectionID = ?";
+        Integer receiptLineItemID = jdbcTemplate.queryForObject(sql, Integer.class, inspectionID);
 
         if (receiptLineItemID == null) {
             throw new IllegalArgumentException("No Receipt Line Item found for Inspection ID: " + inspectionID);
         }
-
-        // Step 2: Get ReceiptID
-        String sql2 = "SELECT ReceiptID FROM ImportReceiptLineItem WHERE ReceiptLineItemID = ?";
-        Integer receiptID = jdbcTemplate.queryForObject(sql2, Integer.class, receiptLineItemID);
-
-        if (receiptID == null) {
-            throw new IllegalArgumentException("No Receipt found for Receipt Line Item ID: " + receiptLineItemID);
-        }
-
-        return receiptID;
+        return receiptLineItemID;
     }
 
     private String getInspectionNumberByID(Integer inspectionID) {

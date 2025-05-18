@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.sql.Date;
 
 public record ImportReceiptLineItemCreateRequest(
+    Integer warehouseID,
     Integer receiptID,
     Integer productID,
     Integer receivedQuantity,

@@ -36,7 +36,9 @@ public class ImportReceiptLineItemServiceImpl implements ImportReceiptLineItemSe
         String sql = """
             SELECT
                 li.ReceiptLineItemID,
+                li.WarehouseID,
                 li.ReceiptID,
+                ih.ReceiptNumber AS ReceiptNumber,
                 li.ProductID,
                 li.LineItemNumber,
                 li.ReceivedQuantity,
@@ -50,20 +52,25 @@ public class ImportReceiptLineItemServiceImpl implements ImportReceiptLineItemSe
                 li.UpdatedAt,
                 p.Name AS ProductName,
                 cu.FullName AS CreatedByName,
-                uu.FullName AS UpdatedByName
+                uu.FullName AS UpdatedByName,
+                w.Name AS WarehouseName
             FROM ImportReceiptLineItem li
+            LEFT JOIN ImportReceiptHeader ih ON li.ReceiptID = ih.ReceiptID
             LEFT JOIN Product p ON li.ProductID = p.ProductID
             LEFT JOIN User cu ON li.CreatedBy = cu.UserID
             LEFT JOIN User uu ON li.UpdatedBy = uu.UserID
+            LEFT JOIN Warehouse w ON li.WarehouseID = w.WarehouseID
             WHERE li.ReceiptID = ?
             """;
 
         List<ImportReceiptLineItem> items = jdbcTemplate.query(
             sql,
-            new Object[]{receiptID},
             (rs, rowNum) -> new ImportReceiptLineItem(
                 rs.getInt("ReceiptLineItemID"),
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
                 rs.getInt("ReceiptID"),
+                rs.getString("ReceiptNumber"),
                 rs.getInt("ProductID"),
                 rs.getString("ProductName"),
                 rs.getString("LineItemNumber"),
@@ -78,7 +85,8 @@ public class ImportReceiptLineItemServiceImpl implements ImportReceiptLineItemSe
                 rs.getInt("UpdatedBy"),
                 rs.getString("UpdatedByName"),
                 rs.getTimestamp("UpdatedAt")
-            )
+            ),
+            new Object[]{receiptID}
         );
 
         return items.toArray(ImportReceiptLineItem[]::new);
@@ -89,7 +97,9 @@ public class ImportReceiptLineItemServiceImpl implements ImportReceiptLineItemSe
         String sql = """
             SELECT
                 li.ReceiptLineItemID,
+                li.WarehouseID,
                 li.ReceiptID,
+                ih.ReceiptNumber AS ReceiptNumber,
                 li.ProductID,
                 li.LineItemNumber,
                 li.ReceivedQuantity,
@@ -103,20 +113,25 @@ public class ImportReceiptLineItemServiceImpl implements ImportReceiptLineItemSe
                 li.UpdatedAt,
                 p.Name AS ProductName,
                 CONCAT(cu.FirstName, ' ', cu.LastName) AS CreatedByName,
-                CONCAT(uu.FirstName, ' ', uu.LastName) AS UpdatedByName
+                CONCAT(uu.FirstName, ' ', uu.LastName) AS UpdatedByName,
+                w.Name AS WarehouseName
             FROM ImportReceiptLineItem li
+            LEFT JOIN ImportReceiptHeader ih ON li.ReceiptID = ih.ReceiptID
             LEFT JOIN Product p ON li.ProductID = p.ProductID
             LEFT JOIN User cu ON li.CreatedBy = cu.UserID
             LEFT JOIN User uu ON li.UpdatedBy = uu.UserID
+            LEFT JOIN Warehouse w ON li.WarehouseID = w.WarehouseID
             WHERE li.ReceiptLineItemID = ?
             """;
 
         return jdbcTemplate.queryForObject(
             sql,
-            new Object[]{receiptLineItemID},
             (rs, rowNum) -> new ImportReceiptLineItem(
                 rs.getInt("ReceiptLineItemID"),
+                rs.getInt("WarehouseID"),
+                rs.getString("WarehouseName"),
                 rs.getInt("ReceiptID"),
+                rs.getString("ReceiptNumber"),
                 rs.getInt("ProductID"),
                 rs.getString("ProductName"),
                 rs.getString("LineItemNumber"),
@@ -131,7 +146,8 @@ public class ImportReceiptLineItemServiceImpl implements ImportReceiptLineItemSe
                 rs.getInt("UpdatedBy"),
                 rs.getString("UpdatedByName"),
                 rs.getTimestamp("UpdatedAt")
-            )
+            ),
+            new Object[]{receiptLineItemID}
         );
     }
 
@@ -139,7 +155,7 @@ public class ImportReceiptLineItemServiceImpl implements ImportReceiptLineItemSe
     public Integer getReceiptIDByLineItemID(int lineItemID)
     {
         String sql = "SELECT ReceiptID FROM ImportReceiptLineItem WHERE ReceiptLineItemID = ?";
-        return jdbcTemplate.queryForObject(sql, new Object[]{lineItemID}, Integer.class);
+        return jdbcTemplate.queryForObject(sql, Integer.class, new Object[]{lineItemID});
     }
 
     @Override
@@ -149,16 +165,17 @@ public class ImportReceiptLineItemServiceImpl implements ImportReceiptLineItemSe
 
         String sql = """
             INSERT INTO ImportReceiptLineItem (
-                ReceiptID, ProductID, LineItemNumber,
+                WarehouseID, ReceiptID, ProductID, LineItemNumber,
                 ReceivedQuantity,
                 LotNumber, ExpirationDate,
                 UnitCost, Status,
                 CreatedBy, UpdatedBy
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         jdbcTemplate.update(
             sql,
+            request.warehouseID(),
             request.receiptID(),
             request.productID(),
             lineItemNumber,
@@ -183,7 +200,7 @@ public class ImportReceiptLineItemServiceImpl implements ImportReceiptLineItemSe
             ImportActivityTargetType.LINE_ITEM.value(),
             ImportActivityActionType.CREATE.value(),
             id,
-            "Tạo phiếu sản phẩm: " + lineItemNumber
+            "Tạo lô hàng: " + request.lotNumber()
         );
 
         return new ImportReceiptLineItemCreateResponse(
@@ -192,15 +209,11 @@ public class ImportReceiptLineItemServiceImpl implements ImportReceiptLineItemSe
         );
     }
 
-   @Override
+    @Override
     public ImportReceiptLineItemUpdateResponse updateReceiptLineItemPartially(Integer receiptLineItemID, ImportReceiptLineItemUpdateRequest request) {
         List<String> updates = new ArrayList<>();
         List<Object> params = new ArrayList<>();
 
-        if (request.lotNumber() != null) {
-            updates.add("LotNumber = ?");
-            params.add(request.lotNumber());
-        }
         if (request.expirationDate() != null) {
             updates.add("ExpirationDate = ?");
             params.add(request.expirationDate());
@@ -234,9 +247,9 @@ public class ImportReceiptLineItemServiceImpl implements ImportReceiptLineItemSe
         }
         // Log update activity
         // Get lineNumber for logging
-        String lineItemNumberSql = "SELECT LineItemNumber FROM ImportReceiptLineItem WHERE ReceiptLineItemID = ?";
-        String lineItemNumber = jdbcTemplate.queryForObject(lineItemNumberSql, new Object[]{receiptLineItemID}, String.class);
-        if (lineItemNumber == null) {
+        String lotNumberSql = "SELECT LotNumber FROM ImportReceiptLineItem WHERE ReceiptLineItemID = ?";
+        String lotNumber = jdbcTemplate.queryForObject(lotNumberSql, String.class, new Object[]{receiptLineItemID});
+        if (lotNumber == null) {
             throw new IllegalArgumentException("ReceiptLineItemID not found.");
         }
 
@@ -246,7 +259,7 @@ public class ImportReceiptLineItemServiceImpl implements ImportReceiptLineItemSe
             ImportActivityTargetType.LINE_ITEM.value(),
             ImportActivityActionType.UPDATE.value(),
             receiptLineItemID,
-            "Cập nhật phiếu sản phẩm: " + lineItemNumber
+            "Câp nhật lô hàng: " + lotNumber
         );
         String message = "Import Receipt Line Item updated successfully.";
         return new ImportReceiptLineItemUpdateResponse(receiptLineItemID, message);

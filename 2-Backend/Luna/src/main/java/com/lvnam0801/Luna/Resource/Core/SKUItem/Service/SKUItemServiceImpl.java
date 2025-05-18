@@ -241,16 +241,38 @@ public class SKUItemServiceImpl implements SKUItemService {
         ), itemID);
     }
 
+    private String getProductCode(Integer productID)
+    {
+        String sql = """
+            SELECT ProductCode FROM Product
+            WHERE ProductID = ?
+        """;
+        String productCode = jdbcTemplate.queryForObject(sql, String.class, new Object[]{productID});
+        return productCode;
+    }
+
+    private String getLotNumber(Integer receiptLineItemID)
+    {
+        String sql = """
+            SELECT LotNumber FROM ImportReceiptLineItem
+            WHERE ReceiptLineItemID = ?        
+        """;
+        String lotNumber = jdbcTemplate.queryForObject(sql, String.class, new Object[]{receiptLineItemID});
+        return lotNumber;
+    }
     @Override
     public SKUItemCreateResponse createSKUItem(SKUItemCreateRequest request)
     {
+        String productCode = getProductCode(request.productID());
+        String lotNumber = getLotNumber(request.receiptLineItemID());
+
         // Step 1: Generate SKU automatically
-        String generatedSKU = SKUGenerator.generateSKU(jdbcTemplate, request.productID());
+        String generatedSKU = SKUGenerator.generateSKU(productCode, lotNumber);
 
         // Step 2: Insert into SKUItem
         String sql = """
-            INSERT INTO SKUItem (SKU, Quantity, ProductID, Status)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO SKUItem (SKU, Quantity, ProductID, ReceiptLineItemID, WarehouseID, LocationID, Status)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """;
 
         jdbcTemplate.update(
@@ -258,14 +280,16 @@ public class SKUItemServiceImpl implements SKUItemService {
             generatedSKU,
             request.quantity(),
             request.productID(),
+            request.receiptLineItemID(),
+            request.warehouseID(),
+            request.locationID(),
             request.status()
         );
 
         Integer itemID = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Integer.class);
         SKUItemCreateResponse item = new SKUItemCreateResponse(
             itemID,
-            generatedSKU,
-            request.quantity()
+            generatedSKU
         );
         // Step 3: Return the created SKUItem
         return item;
