@@ -1,5 +1,6 @@
 CREATE TABLE InventoryChecks (
     InventoryCheckID INT PRIMARY KEY AUTO_INCREMENT,
+    InventoryCheckNumber VARCHAR(100),
     WarehouseID INT NOT NULL,
     CheckedBy INT,
     CheckedDate DATETIME,

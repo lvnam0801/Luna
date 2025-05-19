@@ -6,7 +6,7 @@ public record InventoryCheckDetail (
     
     Integer skuItemID,
     String sku,
-    
+
     Integer locationID,
     String locationName,
 

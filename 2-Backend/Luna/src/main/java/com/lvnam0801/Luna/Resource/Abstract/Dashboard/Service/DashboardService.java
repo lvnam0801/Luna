@@ -6,6 +6,7 @@ import java.util.List;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.BestSellingProduct;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.DailyRevenueEntry;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.DashboardResponse;
+import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.ExportProfitPerLot;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.RecentExportOrderEntry;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.RecentImportReceiptEntry;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.StockLevelOverview;
@@ -34,4 +35,9 @@ public interface DashboardService {
     public List<RecentImportReceiptEntry> fetchRecentImportReceipts(Integer warehouseID);
     public List<RecentImportReceiptEntry> fetchRecentImportReceipts(LocalDate fromDate, LocalDate toDate);
     public List<RecentImportReceiptEntry> fetchRecentImportReceipts(Integer warehouseID, LocalDate fromDate, LocalDate toDate);
+
+    public List<ExportProfitPerLot> getExportProfitByLot();
+    public List<ExportProfitPerLot> getExportProfitByLot(int warehouseID);
+    public List<ExportProfitPerLot> getExportProfitByLot(LocalDate fromDate, LocalDate toDate);
+    public List<ExportProfitPerLot> getExportProfitByLot(int warehouseID, LocalDate fromDate, LocalDate toDate);
 }

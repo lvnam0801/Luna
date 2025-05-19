@@ -69,7 +69,11 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
                 o.UpdatedBy,
                 updatedByUser.FullName AS UpdatedByName,
                 o.CreatedAt,
-                o.UpdatedAt
+                o.UpdatedAt,
+                o.DestinationWarehouseID,
+                w2.Name AS DestinationWarehouseName,
+                o.LinkedImportReceiptID,
+                ih.ReceiptNumber
             FROM ExportOrderHeader o
             LEFT JOIN Party customer ON o.CustomerID = customer.PartyID
             LEFT JOIN Party carrier ON o.CarrierID = carrier.PartyID
@@ -77,6 +81,8 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
             LEFT JOIN Address a ON o.ShippingAddressID = a.AddressID
             LEFT JOIN User createdByUser ON o.CreatedBy = createdByUser.UserID
             LEFT JOIN User updatedByUser ON o.UpdatedBy = updatedByUser.UserID
+            LEFT JOIN Warehouse w2 ON o.DestinationWarehouseID = w2.WarehouseID
+            LEFT JOIN ImportReceiptHeader ih ON o.LinkedImportReceiptID = ih.ReceiptID
             ORDER BY o.OrderID
             """;
     
@@ -113,6 +119,10 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
                 rs.getString("Status"),
     
                 rs.getObject("ReceiptID", Integer.class), // can be NULL
+                rs.getInt("DestinationWarehouseID"),
+                rs.getString("DestinationWarehouseName"),
+                rs.getInt("LinkedImportReceiptID"),
+                rs.getString("ReceiptNumber"),
     
                 rs.getInt("CreatedBy"),
                 rs.getString("CreatedByName"),
@@ -162,7 +172,11 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
                 o.UpdatedBy,
                 updatedByUser.FullName AS UpdatedByName,
                 o.CreatedAt,
-                o.UpdatedAt
+                o.UpdatedAt,
+                o.DestinationWarehouseID,
+                w2.Name AS DestinationWarehouseName,
+                o.LinkedImportReceiptID,
+                ih.ReceiptNumber
             FROM ExportOrderHeader o
             LEFT JOIN Party customer ON o.CustomerID = customer.PartyID
             LEFT JOIN Party carrier ON o.CarrierID = carrier.PartyID
@@ -170,6 +184,8 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
             LEFT JOIN Address a ON o.ShippingAddressID = a.AddressID
             LEFT JOIN User createdByUser ON o.CreatedBy = createdByUser.UserID
             LEFT JOIN User updatedByUser ON o.UpdatedBy = updatedByUser.UserID
+            LEFT JOIN Warehouse w2 ON o.DestinationWarehouseID = w2.WarehouseID
+            LEFT JOIN ImportReceiptHeader ih ON o.LinkedImportReceiptID = ih.ReceiptID
             WHERE o.OrderID = ?
         """;
 
@@ -204,7 +220,12 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
                     rs.getString("Notes"),
                     rs.getString("Status"),
                     
-                    rs.getObject("ReceiptID", Integer.class), // nullable
+                    rs.getObject("ReceiptID", Integer.class), // nullable,
+                    rs.getInt("DestinationWarehouseID"),
+                    rs.getString("DestinationWarehouseName"),
+                    rs.getInt("LinkedImportReceiptID"),
+                    rs.getString("ReceiptNumber"),
+
                     
                     rs.getInt("CreatedBy"),
                     rs.getString("CreatedByName"),
@@ -240,11 +261,13 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
                 Notes,
                 Status,
                 ReceiptID,
+                DestinationWarehouseID,
+                LinkedImportReceiptID,
                 CreatedBy,
                 CreatedAt,
                 UpdatedBy,
                 UpdatedAt
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         jdbcTemplate.update(
@@ -262,6 +285,8 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
             request.notes(),
             request.status(),
             request.receiptID(),
+            request.destinationWarehouseID(),
+            request.linkedImportReceiptID(),
             currentUserID,
             now,
             currentUserID,
@@ -339,6 +364,10 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
             updates.add("ReceiptID = ?");
             params.add(request.receiptID());
         }
+        if(request.linkedImportReceiptID() != null){
+            updates.add("LinkedImportReceiptID = ?");
+            params.add(request.linkedImportReceiptID());
+        }
 
         if (updates.isEmpty()) {
             throw new IllegalArgumentException("No valid fields provided to update.");
@@ -394,7 +423,11 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
                 o.UpdatedBy,
                 updatedByUser.FullName AS UpdatedByName,
                 o.CreatedAt,
-                o.UpdatedAt
+                o.UpdatedAt,
+                o.DestinationWarehouseID,
+                w2.Name AS DestinationWarehouseName,
+                o.LinkedImportReceiptID,
+                ih.ReceiptNumber
             FROM ExportOrderHeader o
             LEFT JOIN Party customer ON o.CustomerID = customer.PartyID
             LEFT JOIN Party carrier ON o.CarrierID = carrier.PartyID
@@ -402,6 +435,8 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
             LEFT JOIN Address a ON o.ShippingAddressID = a.AddressID
             LEFT JOIN User createdByUser ON o.CreatedBy = createdByUser.UserID
             LEFT JOIN User updatedByUser ON o.UpdatedBy = updatedByUser.UserID
+            LEFT JOIN Warehouse w2 ON o.DestinationWarehouseID = w2.WarehouseID
+            LEFT JOIN ImportReceiptHeader ih ON o.LinkedImportReceiptID = ih.ReceiptID
             WHERE o.OrderDate BETWEEN ? AND ?
             AND o.Status = 'active'
             ORDER BY o.OrderDate DESC
@@ -435,6 +470,10 @@ public class ExportOrderHeaderServiceImpl implements ExportOrderHeaderService {
                 rs.getString("Notes"),
                 rs.getString("Status"),
                 rs.getObject("ReceiptID", Integer.class),
+                rs.getInt("DestinationWarehouseID"),
+                rs.getString("DestinationWarehouseName"),
+                rs.getInt("LinkedImportReceiptID"),
+                rs.getString("ReceiptNumber"),
                 rs.getInt("CreatedBy"),
                 rs.getString("CreatedByName"),
                 rs.getInt("UpdatedBy"),

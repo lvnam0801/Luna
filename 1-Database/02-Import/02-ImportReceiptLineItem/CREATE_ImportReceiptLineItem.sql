@@ -23,12 +23,3 @@ CREATE TABLE ImportReceiptLineItem (
     FOREIGN KEY (CreatedBy) REFERENCES User(UserID) ON DELETE SET NULL,
     FOREIGN KEY (UpdatedBy) REFERENCES User(UserID) ON DELETE SET NULL
 );
-
--- ALTER TABLE ImportReceiptLineItem 
---     ADD WarehouseID INT AFTER ReceiptLineItemID;
--- ALTER TABLE ImportReceiptLineItem 
---     ADD FOREIGN KEY (WarehouseID) REFERENCES Warehouse(WarehouseID); 
-
--- ALTER TABLE ImportReceiptLineItem DROP COLUMN WarehouseID;
-
--- ALTER TABLE ImportReceiptLineItem DROP FOREIGN KEY ImportReceiptLineItem_ibfk_5; 

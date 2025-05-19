@@ -155,7 +155,7 @@ public class ExportOrderLineItemServiceImpl implements ExportOrderLineItemServic
         if (id == null) {
             throw new IllegalStateException("Failed to retrieve the last inserted ID.");
         }
-        String content = "Tạo dòng xuất kho " + lineItemNumber;
+        String content = "Tạo lô hàng xuất " + request.lotNumber();
 
         // Log activity
         exportActivityLogService.log(new ExportActivityLogRequest(

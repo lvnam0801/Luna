@@ -250,7 +250,7 @@ public class ShipmentServiceImpl implements ShipmentService {
             ExportActivityTargetType.SHIPMENT.value(),
             ExportActivityActionType.CREATE.value(),
             shipmentID,
-            "Tạo shipment mới: " + request.shipmentNumber()
+            "Tạo vận đơn mới: " + request.shipmentNumber()
         ));
 
         return new ShipmentCreateResponse(shipmentID, "Shipment created successfully.");
@@ -320,7 +320,7 @@ public class ShipmentServiceImpl implements ShipmentService {
             ExportActivityTargetType.SHIPMENT.value(),
             ExportActivityActionType.UPDATE.value(),
             shipmentID,
-            "Cập nhật shipment ID: " + shipmentNumber
+            "Cập nhật vận đơn " + shipmentNumber
         ));
 
         return new ShipmentUpdateResponse(shipmentID, "Shipment updated successfully.");

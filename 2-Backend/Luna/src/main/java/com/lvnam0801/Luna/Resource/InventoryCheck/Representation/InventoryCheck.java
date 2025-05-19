@@ -5,6 +5,7 @@ import java.util.List;
 
 public record InventoryCheck (
     Integer inventoryCheckID,
+    String inventoryCheckNumber,
     
     Integer warehouseID,
     String warehouseName,

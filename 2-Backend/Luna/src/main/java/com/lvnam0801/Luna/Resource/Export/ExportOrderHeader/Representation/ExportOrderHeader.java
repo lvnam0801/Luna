@@ -33,6 +33,10 @@ public record ExportOrderHeader(
 
     // Direct transition from Import Receipt (can be null)
     Integer receiptID,
+    Integer destinationWarehouseID,
+    String destinationWarehouseName,
+    Integer linkedImportReceiptID,
+    String linkedImportReceiptNumber,
 
     Integer createdBy,
     String createdByName,

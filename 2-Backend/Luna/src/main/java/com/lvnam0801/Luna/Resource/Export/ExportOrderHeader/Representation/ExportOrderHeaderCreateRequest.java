@@ -24,5 +24,7 @@ public record ExportOrderHeaderCreateRequest(
     String status,
 
     // Direct transition from Import Receipt (nullable)
-    Integer receiptID
+    Integer receiptID,
+    Integer destinationWarehouseID,
+    Integer linkedImportReceiptID
 ) {}

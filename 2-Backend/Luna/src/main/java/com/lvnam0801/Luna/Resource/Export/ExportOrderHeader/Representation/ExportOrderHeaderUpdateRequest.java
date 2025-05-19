@@ -14,5 +14,6 @@ public record ExportOrderHeaderUpdateRequest(
     String orderStatus,
     String notes,
     String status,
-    Integer receiptID
+    Integer receiptID,
+    Integer linkedImportReceiptID
 ) {}

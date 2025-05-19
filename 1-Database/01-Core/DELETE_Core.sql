@@ -1,0 +1,27 @@
+-- DELETE FROM ProductCategory;
+-- ALTER TABLE ProductCategory AUTO_INCREMENT = 1;
+
+-- DELETE FROM Manufacturer;
+-- ALTER TABLE Manufacturer AUTO_INCREMENT = 1;
+
+
+-- DELETE FROM SKUItem;
+-- ALTER TABLE SKUItem AUTO_INCREMENT = 1;
+
+-- DELETE FROM ProductDimensions;
+-- ALTER TABLE ProductDimensions AUTO_INCREMENT = 1;
+
+-- DELETE FROM Product;
+-- ALTER TABLE Product AUTO_INCREMENT = 1;
+
+-- DELETE FROM Warehouse;
+-- ALTER TABLE Warehouse AUTO_INCREMENT = 1;
+
+-- DELETE FROM Location;
+-- ALTER TABLE Location AUTO_INCREMENT = 1;
+
+-- DELETE FROM Party;
+-- ALTER TABLE Party AUTO_INCREMENT = 1;
+
+-- DELETE FROM AddressID;
+-- ALTER TABLE AddressID AUTO_INCREMENT = 1;

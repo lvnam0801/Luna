@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.BestSellingProduct;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.DailyRevenueEntry;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.DashboardResponse;
+import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.ExportProfitPerLot;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.RecentExportOrderEntry;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.RecentImportReceiptEntry;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.StockLevelOverview;
@@ -268,6 +269,60 @@ public class LunaDashboardController {
             @RequestParam("toDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
         try {
             List<RecentImportReceiptEntry> receipts = dashboardService.fetchRecentImportReceipts(warehouseID, fromDate, toDate);
+            return ResponseEntity.ok(receipts);
+        } catch (Exception e) {
+            return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Failed to fetch import receipts by date range: " + e.getMessage());
+        }
+    }
+
+     @GetMapping("/export-profit-by-lot")
+    public ResponseEntity<?> getExportProfitByLot() {
+        try {
+            List<ExportProfitPerLot> receipts = dashboardService.getExportProfitByLot();
+            return ResponseEntity.ok(receipts);
+        } catch (Exception e) {
+            return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Failed to fetch import receipts by date range: " + e.getMessage());
+        }
+    }
+
+     @GetMapping("/export-profit-by-lot/by-warehouse")
+    public ResponseEntity<?> getExportProfitByLotByWarehouse(
+            @RequestParam("warehouseID") Integer warehouseID){
+        try {
+            List<ExportProfitPerLot> receipts = dashboardService.getExportProfitByLot(warehouseID);
+            return ResponseEntity.ok(receipts);
+        } catch (Exception e) {
+            return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Failed to fetch import receipts by date range: " + e.getMessage());
+        }
+    }
+    
+    @GetMapping("/export-profit-by-lot/by-date-range")
+    public ResponseEntity<?> getExportProfitByLotByDateRange(
+            @RequestParam("fromDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam("toDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        try {
+            List<ExportProfitPerLot> receipts = dashboardService.getExportProfitByLot(fromDate, toDate);
+            return ResponseEntity.ok(receipts);
+        } catch (Exception e) {
+            return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Failed to fetch import receipts by date range: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/export-profit-by-lot/by-warehouse-and-date-range")
+    public ResponseEntity<?> getExportProfitByLotByWarehouseAndDateRange(
+            @RequestParam("warehouseID") Integer warehouseID,
+            @RequestParam("fromDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam("toDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        try {
+            List<ExportProfitPerLot> receipts = dashboardService.getExportProfitByLot(warehouseID, fromDate, toDate);
             return ResponseEntity.ok(receipts);
         } catch (Exception e) {
             return ResponseEntity

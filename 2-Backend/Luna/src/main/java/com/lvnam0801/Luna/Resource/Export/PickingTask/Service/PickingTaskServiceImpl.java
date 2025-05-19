@@ -284,7 +284,7 @@ public class PickingTaskServiceImpl implements PickingTaskService {
             ExportActivityTargetType.PICKING_TASK.value(),
             ExportActivityActionType.UPDATE.value(),
             pickingTaskID,
-            "Cập nhật nhiệm vụ lấy hàng " + pickingNumber
+            "Cập nhật bản ghi lấy hàng " + pickingNumber
         ));
 
         return new PickingTaskUpdateResponse(pickingTaskID, "Picking Task updated successfully.");
@@ -318,7 +318,7 @@ public class PickingTaskServiceImpl implements PickingTaskService {
             ExportActivityTargetType.SKU_ITEM.value(),
             ExportActivityActionType.UPDATE.value(),
             originalTask.skuItemID(),
-            "Khôi phục số lượng SKU vì huỷ picking task: " + pickingTaskID
+            "Khôi phục số lượng SKU vì huỷ lấy hàng từ kho: " + pickingTaskID
         ));
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.BestSellingProduct;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.DailyRevenueEntry;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.DashboardResponse;
+import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.ExportProfitPerLot;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.ProductStockByName;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.RecentExportOrderEntry;
 import com.lvnam0801.Luna.Resource.Abstract.Dashboard.Representation.RecentImportReceiptEntry;
@@ -665,6 +666,321 @@ public class DashboardServiceImpl implements DashboardService {
                 rs.getBigDecimal("totalPrice"),
                 rs.getString("status"),
                 rs.getDate("date").toLocalDate()
+            ),
+            new Object[]{warehouseID, fromDate, toDate}
+        );
+    }
+
+    @Override
+    public List<ExportProfitPerLot> getExportProfitByLot() {
+        String sql = """
+            SELECT
+                eol.LotNumber,
+                eol.ProductID,
+                p.Name AS productName,
+                SUM(eol.ExportedQuantity) AS totalExportedQty,
+                eol.UnitPrice,
+
+                (
+                    SELECT irl.UnitCost
+                    FROM ImportReceiptLineItem irl
+                    WHERE irl.LotNumber = eol.LotNumber
+                    AND irl.UnitCost IS NOT NULL
+                    AND irl.UnitCost > 0
+                    ORDER BY irl.CreatedAt ASC
+                    LIMIT 1
+                ) AS unitCost,
+
+                SUM(eol.ExportedQuantity * eol.UnitPrice) AS totalSales,
+
+                SUM(
+                    eol.ExportedQuantity * (
+                        SELECT IFNULL(irl.UnitCost, 0)
+                        FROM ImportReceiptLineItem irl
+                        WHERE irl.LotNumber = eol.LotNumber
+                        AND irl.UnitCost IS NOT NULL
+                        AND irl.UnitCost > 0
+                        ORDER BY irl.CreatedAt ASC
+                        LIMIT 1
+                    )
+                ) AS totalCost,
+
+                SUM(eol.ExportedQuantity * eol.UnitPrice) - SUM(
+                    eol.ExportedQuantity * (
+                        SELECT IFNULL(irl.UnitCost, 0)
+                        FROM ImportReceiptLineItem irl
+                        WHERE irl.LotNumber = eol.LotNumber
+                        AND irl.UnitCost IS NOT NULL
+                        AND irl.UnitCost > 0
+                        ORDER BY irl.CreatedAt ASC
+                        LIMIT 1
+                    )
+                ) AS profit,
+
+                eh.OrderDate,
+                eh.WarehouseID
+            
+                FROM ExportOrderLineItem eol
+                JOIN ExportOrderHeader eh ON eol.OrderID = eh.OrderID
+                JOIN Product p ON p.ProductID = eol.ProductID
+                WHERE eh.ExportPurpose = 'sale'
+                
+            GROUP BY eol.LotNumber, eol.ProductID, eol.UnitPrice, eh.OrderDate, eh.WarehouseID, p.Name
+            ORDER BY eh.OrderDate ASC, eol.ProductID
+        """;
+
+        return jdbcTemplate.query(
+            sql,
+            (rs, rowNum) -> new ExportProfitPerLot(
+                rs.getString("LotNumber"),
+                rs.getInt("ProductID"),
+                rs.getString("productName"),
+                rs.getInt("totalExportedQty"),
+                rs.getBigDecimal("UnitPrice"),
+                rs.getBigDecimal("unitCost"),
+                rs.getBigDecimal("totalSales"),
+                rs.getBigDecimal("totalCost"),
+                rs.getBigDecimal("profit"),
+                rs.getDate("OrderDate").toLocalDate(),
+                rs.getInt("WarehouseID")
+            ),
+            new Object[]{}
+        );
+    }
+
+    @Override
+    public List<ExportProfitPerLot> getExportProfitByLot(int warehouseID) {
+        String sql = """
+            SELECT
+                eol.LotNumber,
+                eol.ProductID,
+                p.Name AS productName,
+                SUM(eol.ExportedQuantity) AS totalExportedQty,
+                eol.UnitPrice,
+
+                (
+                    SELECT irl.UnitCost
+                    FROM ImportReceiptLineItem irl
+                    WHERE irl.LotNumber = eol.LotNumber
+                    AND irl.UnitCost IS NOT NULL
+                    AND irl.UnitCost > 0
+                    ORDER BY irl.CreatedAt ASC
+                    LIMIT 1
+                ) AS unitCost,
+
+                SUM(eol.ExportedQuantity * eol.UnitPrice) AS totalSales,
+
+                SUM(
+                    eol.ExportedQuantity * (
+                        SELECT IFNULL(irl.UnitCost, 0)
+                        FROM ImportReceiptLineItem irl
+                        WHERE irl.LotNumber = eol.LotNumber
+                        AND irl.UnitCost IS NOT NULL
+                        AND irl.UnitCost > 0
+                        ORDER BY irl.CreatedAt ASC
+                        LIMIT 1
+                    )
+                ) AS totalCost,
+
+                SUM(eol.ExportedQuantity * eol.UnitPrice) - SUM(
+                    eol.ExportedQuantity * (
+                        SELECT IFNULL(irl.UnitCost, 0)
+                        FROM ImportReceiptLineItem irl
+                        WHERE irl.LotNumber = eol.LotNumber
+                        AND irl.UnitCost IS NOT NULL
+                        AND irl.UnitCost > 0
+                        ORDER BY irl.CreatedAt ASC
+                        LIMIT 1
+                    )
+                ) AS profit,
+
+                eh.OrderDate,
+                eh.WarehouseID
+
+            FROM ExportOrderLineItem eol
+            JOIN ExportOrderHeader eh ON eol.OrderID = eh.OrderID
+            JOIN Product p ON p.ProductID = eol.ProductID
+
+            WHERE eh.WarehouseID = ?
+            AND eh.ExportPurpose = 'sale'
+
+            GROUP BY eol.LotNumber, eol.ProductID, eol.UnitPrice, eh.OrderDate, eh.WarehouseID, p.Name
+            ORDER BY eh.OrderDate ASC, eol.ProductID
+        """;
+
+        return jdbcTemplate.query(
+            sql,
+            (rs, rowNum) -> new ExportProfitPerLot(
+                rs.getString("LotNumber"),
+                rs.getInt("ProductID"),
+                rs.getString("productName"),
+                rs.getInt("totalExportedQty"),
+                rs.getBigDecimal("UnitPrice"),
+                rs.getBigDecimal("unitCost"),
+                rs.getBigDecimal("totalSales"),
+                rs.getBigDecimal("totalCost"),
+                rs.getBigDecimal("profit"),
+                rs.getDate("OrderDate").toLocalDate(),
+                rs.getInt("WarehouseID")
+            ),
+            new Object[]{warehouseID}
+        );
+    }
+
+    @Override
+    public List<ExportProfitPerLot> getExportProfitByLot(LocalDate fromDate, LocalDate toDate) {
+        String sql = """
+            SELECT
+                eol.LotNumber,
+                eol.ProductID,
+                p.Name AS productName,
+                SUM(eol.ExportedQuantity) AS totalExportedQty,
+                eol.UnitPrice,
+
+                (
+                    SELECT irl.UnitCost
+                    FROM ImportReceiptLineItem irl
+                    WHERE irl.LotNumber = eol.LotNumber
+                    AND irl.UnitCost IS NOT NULL
+                    AND irl.UnitCost > 0
+                    ORDER BY irl.CreatedAt ASC
+                    LIMIT 1
+                ) AS unitCost,
+
+                SUM(eol.ExportedQuantity * eol.UnitPrice) AS totalSales,
+
+                SUM(
+                    eol.ExportedQuantity * (
+                        SELECT IFNULL(irl.UnitCost, 0)
+                        FROM ImportReceiptLineItem irl
+                        WHERE irl.LotNumber = eol.LotNumber
+                        AND irl.UnitCost IS NOT NULL
+                        AND irl.UnitCost > 0
+                        ORDER BY irl.CreatedAt ASC
+                        LIMIT 1
+                    )
+                ) AS totalCost,
+
+                SUM(eol.ExportedQuantity * eol.UnitPrice) - SUM(
+                    eol.ExportedQuantity * (
+                        SELECT IFNULL(irl.UnitCost, 0)
+                        FROM ImportReceiptLineItem irl
+                        WHERE irl.LotNumber = eol.LotNumber
+                        AND irl.UnitCost IS NOT NULL
+                        AND irl.UnitCost > 0
+                        ORDER BY irl.CreatedAt ASC
+                        LIMIT 1
+                    )
+                ) AS profit,
+
+                eh.OrderDate,
+                eh.WarehouseID
+
+            FROM ExportOrderLineItem eol
+            JOIN ExportOrderHeader eh ON eol.OrderID = eh.OrderID
+            JOIN Product p ON p.ProductID = eol.ProductID
+
+            WHERE eh.OrderDate BETWEEN ? AND ?
+            AND eh.ExportPurpose = 'sale'
+
+            GROUP BY eol.LotNumber, eol.ProductID, eol.UnitPrice, eh.OrderDate, eh.WarehouseID, p.Name
+            ORDER BY eh.OrderDate ASC, eol.ProductID
+        """;
+
+        return jdbcTemplate.query(
+            sql,
+            (rs, rowNum) -> new ExportProfitPerLot(
+                rs.getString("LotNumber"),
+                rs.getInt("ProductID"),
+                rs.getString("productName"),
+                rs.getInt("totalExportedQty"),
+                rs.getBigDecimal("UnitPrice"),
+                rs.getBigDecimal("unitCost"),
+                rs.getBigDecimal("totalSales"),
+                rs.getBigDecimal("totalCost"),
+                rs.getBigDecimal("profit"),
+                rs.getDate("OrderDate").toLocalDate(),
+                rs.getInt("WarehouseID")
+            ),
+            new Object[]{fromDate, toDate}
+        );
+    }
+
+    @Override
+    public List<ExportProfitPerLot> getExportProfitByLot(int warehouseID, LocalDate fromDate, LocalDate toDate) {
+        String sql = """
+            SELECT
+                eol.LotNumber,
+                eol.ProductID,
+                p.Name AS productName,
+                SUM(eol.ExportedQuantity) AS totalExportedQty,
+                eol.UnitPrice,
+
+                (
+                    SELECT irl.UnitCost
+                    FROM ImportReceiptLineItem irl
+                    WHERE irl.LotNumber = eol.LotNumber
+                    AND irl.UnitCost IS NOT NULL
+                    AND irl.UnitCost > 0
+                    ORDER BY irl.CreatedAt ASC
+                    LIMIT 1
+                ) AS unitCost,
+
+                SUM(eol.ExportedQuantity * eol.UnitPrice) AS totalSales,
+
+                SUM(
+                    eol.ExportedQuantity * (
+                        SELECT IFNULL(irl.UnitCost, 0)
+                        FROM ImportReceiptLineItem irl
+                        WHERE irl.LotNumber = eol.LotNumber
+                        AND irl.UnitCost IS NOT NULL
+                        AND irl.UnitCost > 0
+                        ORDER BY irl.CreatedAt ASC
+                        LIMIT 1
+                    )
+                ) AS totalCost,
+
+                SUM(eol.ExportedQuantity * eol.UnitPrice) - SUM(
+                    eol.ExportedQuantity * (
+                        SELECT IFNULL(irl.UnitCost, 0)
+                        FROM ImportReceiptLineItem irl
+                        WHERE irl.LotNumber = eol.LotNumber
+                        AND irl.UnitCost IS NOT NULL
+                        AND irl.UnitCost > 0
+                        ORDER BY irl.CreatedAt ASC
+                        LIMIT 1
+                    )
+                ) AS profit,
+
+                eh.OrderDate,
+                eh.WarehouseID
+
+            FROM ExportOrderLineItem eol
+            JOIN ExportOrderHeader eh ON eol.OrderID = eh.OrderID
+            JOIN Product p ON p.ProductID = eol.ProductID
+
+            WHERE eh.WarehouseID = ?
+            AND eh.OrderDate BETWEEN ? AND ?
+            AND eh.ExportPurpose = 'sale'
+
+            GROUP BY eol.LotNumber, eol.ProductID, eol.UnitPrice, eh.OrderDate, eh.WarehouseID, p.Name
+            ORDER BY eh.OrderDate ASC, eol.ProductID
+        """;
+
+        return jdbcTemplate.query(
+            sql,
+            (rs, rowNum) -> new ExportProfitPerLot(
+                rs.getString("LotNumber"),
+                rs.getInt("ProductID"),
+                rs.getString("productName"),
+                rs.getInt("totalExportedQty"),
+                rs.getBigDecimal("UnitPrice"),
+                rs.getBigDecimal("unitCost"),
+                rs.getBigDecimal("totalSales"),
+                rs.getBigDecimal("totalCost"),
+                rs.getBigDecimal("profit"),
+                rs.getDate("OrderDate").toLocalDate(),
+                rs.getInt("WarehouseID")
             ),
             new Object[]{warehouseID, fromDate, toDate}
         );

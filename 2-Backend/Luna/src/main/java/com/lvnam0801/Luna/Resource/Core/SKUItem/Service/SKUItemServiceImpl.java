@@ -64,6 +64,7 @@ public class SKUItemServiceImpl implements SKUItemService {
             LEFT JOIN Warehouse w ON s.WarehouseID = w.WarehouseID
             LEFT JOIN Location l ON s.LocationID = l.LocationID
             LEFT JOIN ImportReceiptLineItem r ON s.ReceiptLineItemID = r.ReceiptLineItemID
+            WHERE s.Quantity > 0
         """;
     
         List<SKUItem> items = jdbcTemplate.query(sql, (rs, rowNum) -> new SKUItem(
@@ -141,7 +142,7 @@ public class SKUItemServiceImpl implements SKUItemService {
             LEFT JOIN Warehouse w ON s.WarehouseID = w.WarehouseID
             LEFT JOIN Location l ON s.LocationID = l.LocationID
             LEFT JOIN ImportReceiptLineItem r ON s.ReceiptLineItemID = r.ReceiptLineItemID
-            WHERE s.WarehouseID = ?
+            WHERE s.Quantity > 0 AND s.WarehouseID = ?
         """;
     
         List<SKUItem> items = jdbcTemplate.query(sql, (rs, rowNum) -> new SKUItem(
@@ -221,7 +222,7 @@ public class SKUItemServiceImpl implements SKUItemService {
             LEFT JOIN Warehouse w ON s.WarehouseID = w.WarehouseID
             LEFT JOIN Location l ON s.LocationID = l.LocationID
             LEFT JOIN ImportReceiptLineItem r ON s.ReceiptLineItemID = r.ReceiptLineItemID
-            WHERE s.WarehouseID = ? AND s.SKU = ?
+            WHERE s.Quantity > 0 AND s.WarehouseID = ? AND s.SKU = ?
         """;
     
         List<SKUItem> items = jdbcTemplate.query(sql, (rs, rowNum) -> new SKUItem(
@@ -300,7 +301,7 @@ public class SKUItemServiceImpl implements SKUItemService {
             LEFT JOIN Warehouse w ON s.WarehouseID = w.WarehouseID
             LEFT JOIN Location l ON s.LocationID = l.LocationID
             LEFT JOIN ImportReceiptLineItem r ON s.ReceiptLineItemID = r.ReceiptLineItemID
-            WHERE s.ProductID = ?
+            WHERE s.Quantity > 0 AND s.ProductID = ?
         """;
     
         List<SKUItem> items = jdbcTemplate.query(sql, (rs, rowNum) -> new SKUItem(
@@ -465,7 +466,7 @@ public class SKUItemServiceImpl implements SKUItemService {
     public void decreaseSKUItemQuantity(Integer skuItemID, Integer quantityToDecrease) {
         // Validate enough quantity exists
         Integer currentQty = jdbcTemplate.queryForObject(
-            "SELECT Quantity FROM SKUItem WHERE SKUItemID = ? FOR UPDATE",
+            "SELECT Quantity FROM SKUItem WHERE ItemID = ? FOR UPDATE",
             Integer.class,
             skuItemID
         );

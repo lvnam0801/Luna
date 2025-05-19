@@ -1,5 +1,6 @@
 package com.lvnam0801.Luna.Resource.Import.ImportReceiptHeader.Service;
 
+import java.sql.Date;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -250,14 +251,24 @@ public class ImportReceiptHeaderServiceImpl implements ImportReceiptHeaderServic
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
+        Date expectedArrivalDate = Date.valueOf(LocalDate.now());
+        if (request.expectedArrivalDate() != null) {
+            expectedArrivalDate = request.expectedArrivalDate();
+        }
+
+        Date actualArrivalDate = Date.valueOf(LocalDate.now());
+        if (request.actualArrivalDate() != null) {
+            actualArrivalDate = request.actualArrivalDate();
+        }
+
         jdbcTemplate.update(
             sql,
             request.receiptNumber(),
             request.asnNumber(),
             request.poNumber(),
             request.originLocationID(),
-            request.expectedArrivalDate(),
-            request.actualArrivalDate(),
+            expectedArrivalDate,
+            actualArrivalDate,
             request.receiptStatus(),
             request.notes(),
             request.carrierID(),
@@ -427,8 +438,8 @@ public class ImportReceiptHeaderServiceImpl implements ImportReceiptHeaderServic
             LEFT JOIN Location l ON h.ReceivingDockID = l.LocationID
             LEFT JOIN User createdByUser ON h.CreatedBy = createdByUser.UserID
             LEFT JOIN User updatedByUser ON h.UpdatedBy = updatedByUser.UserID
-            WHERE h.ActualArrivalDate BETWEEN ? AND ?
-            ORDER BY h.ActualArrivalDate DESC
+            WHERE h.expectedArrivalDate BETWEEN ? AND ?
+            ORDER BY h.expectedArrivalDate DESC
             """;
 
         return jdbcTemplate.query(sql, (rs, rowNum) -> new ImportReceiptHeader(
