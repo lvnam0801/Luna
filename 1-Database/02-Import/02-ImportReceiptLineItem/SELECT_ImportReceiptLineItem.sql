@@ -1,4 +1,4 @@
-SELECT * FROM ImportReceiptLineItem;
+-- SELECT * FROM ImportReceiptLineItem;
 
 -- SELECT 
 --     li.ReceiptLineItemID,

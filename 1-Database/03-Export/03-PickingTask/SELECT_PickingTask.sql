@@ -1,1 +1,1 @@
-SELECT * FROM PickingTask;
+-- SELECT * FROM PickingTask;
